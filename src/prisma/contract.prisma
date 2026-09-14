@@ -1,0 +1,359 @@
+// prisma/schema.prisma
+
+enum AssetType {
+
+HARDWARE
+
+SOFTWARE
+
+}
+
+enum AssetCategory {
+
+LAPTOP
+
+DESKTOP
+
+MONITOR
+
+MOBILE
+
+TABLET
+
+PRINTER
+
+PERIPHERAL
+
+SOFTWARE_LICENSE
+
+OTHER
+
+}
+
+enum AssetCondition {
+
+EXCELLENT
+
+GOOD
+
+FAIR
+
+DAMAGED
+
+}
+
+enum AssetStatus {
+
+AVAILABLE
+
+ASSIGNED
+
+IN_REPAIR
+
+RETURN_REQUESTED
+
+RETIRED
+
+}
+
+enum ReturnRequestStatus {
+
+PENDING
+
+APPROVED
+
+REJECTED
+
+COMPLETED
+
+}
+
+enum ServiceRecordStatus {
+
+OPEN
+
+IN_PROGRESS
+
+COMPLETED
+
+CANCELLED
+
+}
+
+enum AuditAction {
+
+ASSET_CREATED
+
+ASSET_UPDATED
+
+ASSET_DELETED
+
+ASSET_ASSIGNED
+
+ASSET_RETURN_REQUESTED
+
+ASSET_RETURNED
+
+ASSET_SENT_TO_REPAIR
+
+ASSET_REPAIR_COMPLETED
+
+ASSET_RETIRED
+
+CONDITION_UPDATED
+
+}
+
+model Employee {
+
+id             String             @id @default(uuid())
+
+employeeCode   String             @unique
+
+name           String
+
+email          String             @unique
+
+department     String
+
+designation    String?
+
+phone          String?
+
+isActive       Boolean            @default(true)
+
+createdAt      TimestamptzString  @default(now())
+
+updatedAt      TimestamptzString  @default(now())
+
+assignments    Assignment[]
+
+returnRequests ReturnRequest[]
+
+@@index([department])
+
+@@index([isActive])
+
+@@map("employees")
+
+}
+
+model Asset {
+
+id               String             @id @default(uuid())
+
+assetTag         String             @unique
+
+name             String
+
+assetType        AssetType
+
+category         AssetCategory
+
+manufacturer     String?
+
+model            String?
+
+serialNumber     String?            @unique
+
+description      String?
+
+purchaseDate     TimestamptzString?
+
+purchasePrice    Decimal?
+
+warrantyExpiry   TimestamptzString?
+
+licenseKey       String?
+
+licenseExpiry    TimestamptzString?
+
+condition        AssetCondition
+
+status           AssetStatus
+
+createdAt        TimestamptzString  @default(now())
+
+updatedAt        TimestamptzString  @default(now())
+
+assignments      Assignment[]
+
+returnRequests   ReturnRequest[]
+
+serviceRecords   ServiceRecord[]
+
+conditionHistory ConditionHistory[]
+
+auditLogs        AuditLog[]
+
+@@index([assetTag])
+
+@@index([serialNumber])
+
+@@index([status])
+
+@@index([assetType])
+
+@@index([category])
+
+@@index([warrantyExpiry])
+
+@@index([licenseExpiry])
+
+@@map("assets")
+
+}
+
+model Assignment {
+
+id                String             @id @default(uuid())
+
+assetId           String
+
+employeeId        String
+
+assignedAt        TimestamptzString  @default(now())
+
+returnedAt        TimestamptzString?
+
+assignedCondition AssetCondition
+
+returnedCondition AssetCondition?
+
+notes             String?
+
+asset             Asset              @relation(fields:[assetId], references:[id], onDelete: Restrict)
+
+employee          Employee           @relation(fields:[employeeId], references:[id], onDelete: Restrict)
+
+@@index([assetId])
+
+@@index([employeeId])
+
+@@index([assignedAt])
+
+@@map("assignments")
+
+}
+
+model ReturnRequest {
+
+id          String              @id @default(uuid())
+
+assetId     String
+
+employeeId  String
+
+reason      String
+
+status      ReturnRequestStatus @default(PENDING)
+
+requestedAt TimestamptzString   @default(now())
+
+processedAt TimestamptzString?
+
+notes       String?
+
+asset       Asset               @relation(fields:[assetId], references:[id], onDelete: Restrict)
+
+employee    Employee            @relation(fields:[employeeId], references:[id], onDelete: Restrict)
+
+@@index([assetId])
+
+@@index([employeeId])
+
+@@index([status])
+
+@@index([requestedAt])
+
+@@map("return_requests")
+
+}
+
+model ServiceRecord {
+
+id         String              @id @default(uuid())
+
+assetId    String
+
+issue      String
+
+vendor     String?
+
+cost       Decimal?
+
+openedAt   TimestamptzString   @default(now())
+
+resolvedAt TimestamptzString?
+
+status     ServiceRecordStatus @default(OPEN)
+
+resolution String?
+
+notes      String?
+
+asset      Asset               @relation(fields:[assetId], references:[id], onDelete: Restrict)
+
+@@index([assetId])
+
+@@index([status])
+
+@@index([openedAt])
+
+@@map("service_records")
+
+}
+
+model ConditionHistory {
+
+id         String             @id @default(uuid())
+
+assetId    String
+
+condition  AssetCondition
+
+notes      String?
+
+recordedAt TimestamptzString  @default(now())
+
+recordedBy String?
+
+asset      Asset              @relation(fields:[assetId], references:[id], onDelete: Restrict)
+
+@@index([assetId])
+
+@@index([recordedAt])
+
+@@map("condition_history")
+
+}
+
+model AuditLog {
+
+id        String             @id @default(uuid())
+
+assetId   String?
+
+action    AuditAction
+
+actor     String
+
+oldStatus AssetStatus?
+
+newStatus AssetStatus?
+
+metadata  Json?
+
+createdAt TimestamptzString  @default(now())
+
+asset     Asset?             @relation(fields:[assetId], references:[id], onDelete: SetNull)
+
+@@index([assetId])
+
+@@index([action])
+
+@@index([createdAt])
+
+@@map("audit_logs")
+
+}

@@ -1,0 +1,2444 @@
+{
+  "schemaVersion": "1",
+  "targetFamily": "sql",
+  "target": "postgres",
+  "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
+  "roots": {
+    "assets": {
+      "model": "Asset",
+      "namespace": "public"
+    },
+    "assignments": {
+      "model": "Assignment",
+      "namespace": "public"
+    },
+    "audit_logs": {
+      "model": "AuditLog",
+      "namespace": "public"
+    },
+    "condition_history": {
+      "model": "ConditionHistory",
+      "namespace": "public"
+    },
+    "employees": {
+      "model": "Employee",
+      "namespace": "public"
+    },
+    "return_requests": {
+      "model": "ReturnRequest",
+      "namespace": "public"
+    },
+    "service_records": {
+      "model": "ServiceRecord",
+      "namespace": "public"
+    }
+  },
+  "domain": {
+    "namespaces": {
+      "public": {
+        "enum": {
+          "AssetCategory": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "LAPTOP",
+                "value": "LAPTOP"
+              },
+              {
+                "name": "DESKTOP",
+                "value": "DESKTOP"
+              },
+              {
+                "name": "MONITOR",
+                "value": "MONITOR"
+              },
+              {
+                "name": "MOBILE",
+                "value": "MOBILE"
+              },
+              {
+                "name": "TABLET",
+                "value": "TABLET"
+              },
+              {
+                "name": "PRINTER",
+                "value": "PRINTER"
+              },
+              {
+                "name": "PERIPHERAL",
+                "value": "PERIPHERAL"
+              },
+              {
+                "name": "SOFTWARE_LICENSE",
+                "value": "SOFTWARE_LICENSE"
+              },
+              {
+                "name": "OTHER",
+                "value": "OTHER"
+              }
+            ]
+          },
+          "AssetCondition": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "EXCELLENT",
+                "value": "EXCELLENT"
+              },
+              {
+                "name": "GOOD",
+                "value": "GOOD"
+              },
+              {
+                "name": "FAIR",
+                "value": "FAIR"
+              },
+              {
+                "name": "DAMAGED",
+                "value": "DAMAGED"
+              }
+            ]
+          },
+          "AssetStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "AVAILABLE",
+                "value": "AVAILABLE"
+              },
+              {
+                "name": "ASSIGNED",
+                "value": "ASSIGNED"
+              },
+              {
+                "name": "IN_REPAIR",
+                "value": "IN_REPAIR"
+              },
+              {
+                "name": "RETURN_REQUESTED",
+                "value": "RETURN_REQUESTED"
+              },
+              {
+                "name": "RETIRED",
+                "value": "RETIRED"
+              }
+            ]
+          },
+          "AssetType": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "HARDWARE",
+                "value": "HARDWARE"
+              },
+              {
+                "name": "SOFTWARE",
+                "value": "SOFTWARE"
+              }
+            ]
+          },
+          "AuditAction": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "ASSET_CREATED",
+                "value": "ASSET_CREATED"
+              },
+              {
+                "name": "ASSET_UPDATED",
+                "value": "ASSET_UPDATED"
+              },
+              {
+                "name": "ASSET_DELETED",
+                "value": "ASSET_DELETED"
+              },
+              {
+                "name": "ASSET_ASSIGNED",
+                "value": "ASSET_ASSIGNED"
+              },
+              {
+                "name": "ASSET_RETURN_REQUESTED",
+                "value": "ASSET_RETURN_REQUESTED"
+              },
+              {
+                "name": "ASSET_RETURNED",
+                "value": "ASSET_RETURNED"
+              },
+              {
+                "name": "ASSET_SENT_TO_REPAIR",
+                "value": "ASSET_SENT_TO_REPAIR"
+              },
+              {
+                "name": "ASSET_REPAIR_COMPLETED",
+                "value": "ASSET_REPAIR_COMPLETED"
+              },
+              {
+                "name": "ASSET_RETIRED",
+                "value": "ASSET_RETIRED"
+              },
+              {
+                "name": "CONDITION_UPDATED",
+                "value": "CONDITION_UPDATED"
+              }
+            ]
+          },
+          "ReturnRequestStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "PENDING",
+                "value": "PENDING"
+              },
+              {
+                "name": "APPROVED",
+                "value": "APPROVED"
+              },
+              {
+                "name": "REJECTED",
+                "value": "REJECTED"
+              },
+              {
+                "name": "COMPLETED",
+                "value": "COMPLETED"
+              }
+            ]
+          },
+          "ServiceRecordStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "OPEN",
+                "value": "OPEN"
+              },
+              {
+                "name": "IN_PROGRESS",
+                "value": "IN_PROGRESS"
+              },
+              {
+                "name": "COMPLETED",
+                "value": "COMPLETED"
+              },
+              {
+                "name": "CANCELLED",
+                "value": "CANCELLED"
+              }
+            ]
+          }
+        },
+        "models": {
+          "Asset": {
+            "fields": {
+              "assetTag": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "assetType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetType",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "category": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetCategory",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "condition": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetCondition",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "licenseExpiry": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "licenseKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "manufacturer": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "model": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchaseDate": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "purchasePrice": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "serialNumber": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "warrantyExpiry": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "assignments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "assetId"
+                  ]
+                },
+                "to": {
+                  "model": "Assignment",
+                  "namespace": "public"
+                }
+              },
+              "auditLogs": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "assetId"
+                  ]
+                },
+                "to": {
+                  "model": "AuditLog",
+                  "namespace": "public"
+                }
+              },
+              "conditionHistory": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "assetId"
+                  ]
+                },
+                "to": {
+                  "model": "ConditionHistory",
+                  "namespace": "public"
+                }
+              },
+              "returnRequests": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "assetId"
+                  ]
+                },
+                "to": {
+                  "model": "ReturnRequest",
+                  "namespace": "public"
+                }
+              },
+              "serviceRecords": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "assetId"
+                  ]
+                },
+                "to": {
+                  "model": "ServiceRecord",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "assetTag": {
+                  "column": "assetTag"
+                },
+                "assetType": {
+                  "column": "assetType"
+                },
+                "category": {
+                  "column": "category"
+                },
+                "condition": {
+                  "column": "condition"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "licenseExpiry": {
+                  "column": "licenseExpiry"
+                },
+                "licenseKey": {
+                  "column": "licenseKey"
+                },
+                "manufacturer": {
+                  "column": "manufacturer"
+                },
+                "model": {
+                  "column": "model"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "purchaseDate": {
+                  "column": "purchaseDate"
+                },
+                "purchasePrice": {
+                  "column": "purchasePrice"
+                },
+                "serialNumber": {
+                  "column": "serialNumber"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "warrantyExpiry": {
+                  "column": "warrantyExpiry"
+                }
+              },
+              "namespaceId": "public",
+              "table": "assets"
+            }
+          },
+          "Assignment": {
+            "fields": {
+              "assetId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "assignedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "assignedCondition": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetCondition",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "employeeId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "notes": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "returnedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "returnedCondition": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetCondition",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              }
+            },
+            "relations": {
+              "asset": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "assetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Asset",
+                  "namespace": "public"
+                }
+              },
+              "employee": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "employeeId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Employee",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "assetId": {
+                  "column": "assetId"
+                },
+                "assignedAt": {
+                  "column": "assignedAt"
+                },
+                "assignedCondition": {
+                  "column": "assignedCondition"
+                },
+                "employeeId": {
+                  "column": "employeeId"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "notes": {
+                  "column": "notes"
+                },
+                "returnedAt": {
+                  "column": "returnedAt"
+                },
+                "returnedCondition": {
+                  "column": "returnedCondition"
+                }
+              },
+              "namespaceId": "public",
+              "table": "assignments"
+            }
+          },
+          "AuditLog": {
+            "fields": {
+              "action": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AuditAction",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "actor": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "assetId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "metadata": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/json@1",
+                  "kind": "scalar"
+                }
+              },
+              "newStatus": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "oldStatus": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              }
+            },
+            "relations": {
+              "asset": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "assetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Asset",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "action": {
+                  "column": "action"
+                },
+                "actor": {
+                  "column": "actor"
+                },
+                "assetId": {
+                  "column": "assetId"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "metadata": {
+                  "column": "metadata"
+                },
+                "newStatus": {
+                  "column": "newStatus"
+                },
+                "oldStatus": {
+                  "column": "oldStatus"
+                }
+              },
+              "namespaceId": "public",
+              "table": "audit_logs"
+            }
+          },
+          "ConditionHistory": {
+            "fields": {
+              "assetId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "condition": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AssetCondition",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "notes": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "recordedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "recordedBy": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "asset": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "assetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Asset",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "assetId": {
+                  "column": "assetId"
+                },
+                "condition": {
+                  "column": "condition"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "notes": {
+                  "column": "notes"
+                },
+                "recordedAt": {
+                  "column": "recordedAt"
+                },
+                "recordedBy": {
+                  "column": "recordedBy"
+                }
+              },
+              "namespaceId": "public",
+              "table": "condition_history"
+            }
+          },
+          "Employee": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "department": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "designation": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "email": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "employeeCode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "isActive": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "phone": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "assignments": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "employeeId"
+                  ]
+                },
+                "to": {
+                  "model": "Assignment",
+                  "namespace": "public"
+                }
+              },
+              "returnRequests": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "employeeId"
+                  ]
+                },
+                "to": {
+                  "model": "ReturnRequest",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "department": {
+                  "column": "department"
+                },
+                "designation": {
+                  "column": "designation"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "employeeCode": {
+                  "column": "employeeCode"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "isActive": {
+                  "column": "isActive"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "phone": {
+                  "column": "phone"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "employees"
+            }
+          },
+          "ReturnRequest": {
+            "fields": {
+              "assetId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "employeeId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "notes": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "processedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "reason": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "requestedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ReturnRequestStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              }
+            },
+            "relations": {
+              "asset": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "assetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Asset",
+                  "namespace": "public"
+                }
+              },
+              "employee": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "employeeId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Employee",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "assetId": {
+                  "column": "assetId"
+                },
+                "employeeId": {
+                  "column": "employeeId"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "notes": {
+                  "column": "notes"
+                },
+                "processedAt": {
+                  "column": "processedAt"
+                },
+                "reason": {
+                  "column": "reason"
+                },
+                "requestedAt": {
+                  "column": "requestedAt"
+                },
+                "status": {
+                  "column": "status"
+                }
+              },
+              "namespaceId": "public",
+              "table": "return_requests"
+            }
+          },
+          "ServiceRecord": {
+            "fields": {
+              "assetId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "cost": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/numeric@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "issue": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "notes": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "openedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "resolution": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "resolvedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ServiceRecordStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "vendor": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "asset": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "assetId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Asset",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "assetId": {
+                  "column": "assetId"
+                },
+                "cost": {
+                  "column": "cost"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "issue": {
+                  "column": "issue"
+                },
+                "notes": {
+                  "column": "notes"
+                },
+                "openedAt": {
+                  "column": "openedAt"
+                },
+                "resolution": {
+                  "column": "resolution"
+                },
+                "resolvedAt": {
+                  "column": "resolvedAt"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "vendor": {
+                  "column": "vendor"
+                }
+              },
+              "namespaceId": "public",
+              "table": "service_records"
+            }
+          }
+        }
+      }
+    }
+  },
+  "storage": {
+    "namespaces": {
+      "public": {
+        "entries": {
+          "table": {
+            "assets": {
+              "checks": [
+                {
+                  "expression": "\"assetType\" IN ('HARDWARE', 'SOFTWARE')",
+                  "name": "assets_assetType_check_8322af3f",
+                  "prefix": "assets_assetType_check"
+                },
+                {
+                  "expression": "\"category\" IN ('LAPTOP', 'DESKTOP', 'MONITOR', 'MOBILE', 'TABLET', 'PRINTER', 'PERIPHERAL', 'SOFTWARE_LICENSE', 'OTHER')",
+                  "name": "assets_category_check_4c442de4",
+                  "prefix": "assets_category_check"
+                },
+                {
+                  "expression": "\"condition\" IN ('EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED')",
+                  "name": "assets_condition_check_c3464631",
+                  "prefix": "assets_condition_check"
+                },
+                {
+                  "expression": "\"status\" IN ('AVAILABLE', 'ASSIGNED', 'IN_REPAIR', 'RETURN_REQUESTED', 'RETIRED')",
+                  "name": "assets_status_check_918c558b",
+                  "prefix": "assets_status_check"
+                }
+              ],
+              "columns": {
+                "assetTag": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "assetType": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "category": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetCategory",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "condition": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetCondition",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "description": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "licenseExpiry": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "licenseKey": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "manufacturer": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "model": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "purchaseDate": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "purchasePrice": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": true
+                },
+                "serialNumber": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "warrantyExpiry": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "assetTag"
+                  ],
+                  "name": "assets_assetTag_idx_662143cc",
+                  "prefix": "assets_assetTag_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "assetType"
+                  ],
+                  "name": "assets_assetType_idx_2f0d97fa",
+                  "prefix": "assets_assetType_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "category"
+                  ],
+                  "name": "assets_category_idx_f2600f8e",
+                  "prefix": "assets_category_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "licenseExpiry"
+                  ],
+                  "name": "assets_licenseExpiry_idx_d82da7ad",
+                  "prefix": "assets_licenseExpiry_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "serialNumber"
+                  ],
+                  "name": "assets_serialNumber_idx_ba64041b",
+                  "prefix": "assets_serialNumber_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status"
+                  ],
+                  "name": "assets_status_idx_e98638ab",
+                  "prefix": "assets_status_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "warrantyExpiry"
+                  ],
+                  "name": "assets_warrantyExpiry_idx_64e2b111",
+                  "prefix": "assets_warrantyExpiry_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "assetTag"
+                  ]
+                },
+                {
+                  "columns": [
+                    "serialNumber"
+                  ]
+                }
+              ]
+            },
+            "assignments": {
+              "checks": [
+                {
+                  "expression": "\"assignedCondition\" IN ('EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED')",
+                  "name": "assignments_assignedCondition_check_18f6382a",
+                  "prefix": "assignments_assignedCondition_check"
+                },
+                {
+                  "expression": "\"returnedCondition\" IN ('EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED')",
+                  "name": "assignments_returnedCondition_check_032ba7e8",
+                  "prefix": "assignments_returnedCondition_check"
+                }
+              ],
+              "columns": {
+                "assetId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "assignedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "assignedCondition": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetCondition",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "employeeId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "notes": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "returnedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "returnedCondition": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetCondition",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "assetId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "assignments"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "assets"
+                  }
+                },
+                {
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "employeeId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "assignments"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "employees"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "assetId"
+                  ],
+                  "name": "assignments_assetId_idx_4ebe630a",
+                  "prefix": "assignments_assetId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "assignedAt"
+                  ],
+                  "name": "assignments_assignedAt_idx_eb36d59d",
+                  "prefix": "assignments_assignedAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "employeeId"
+                  ],
+                  "name": "assignments_employeeId_idx_087dd4a6",
+                  "prefix": "assignments_employeeId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "audit_logs": {
+              "checks": [
+                {
+                  "expression": "\"action\" IN ('ASSET_CREATED', 'ASSET_UPDATED', 'ASSET_DELETED', 'ASSET_ASSIGNED', 'ASSET_RETURN_REQUESTED', 'ASSET_RETURNED', 'ASSET_SENT_TO_REPAIR', 'ASSET_REPAIR_COMPLETED', 'ASSET_RETIRED', 'CONDITION_UPDATED')",
+                  "name": "audit_logs_action_check_52acfe66",
+                  "prefix": "audit_logs_action_check"
+                },
+                {
+                  "expression": "\"newStatus\" IN ('AVAILABLE', 'ASSIGNED', 'IN_REPAIR', 'RETURN_REQUESTED', 'RETIRED')",
+                  "name": "audit_logs_newStatus_check_86d15ce0",
+                  "prefix": "audit_logs_newStatus_check"
+                },
+                {
+                  "expression": "\"oldStatus\" IN ('AVAILABLE', 'ASSIGNED', 'IN_REPAIR', 'RETURN_REQUESTED', 'RETIRED')",
+                  "name": "audit_logs_oldStatus_check_a9be1cd7",
+                  "prefix": "audit_logs_oldStatus_check"
+                }
+              ],
+              "columns": {
+                "action": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AuditAction",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "actor": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "assetId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "metadata": {
+                  "codecId": "pg/json@1",
+                  "nativeType": "json",
+                  "nullable": true
+                },
+                "newStatus": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "oldStatus": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "assetId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "audit_logs"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "assets"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "action"
+                  ],
+                  "name": "audit_logs_action_idx_cd0d2116",
+                  "prefix": "audit_logs_action_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "assetId"
+                  ],
+                  "name": "audit_logs_assetId_idx_4ebe630a",
+                  "prefix": "audit_logs_assetId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "createdAt"
+                  ],
+                  "name": "audit_logs_createdAt_idx_9575dbd7",
+                  "prefix": "audit_logs_createdAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "condition_history": {
+              "checks": [
+                {
+                  "expression": "\"condition\" IN ('EXCELLENT', 'GOOD', 'FAIR', 'DAMAGED')",
+                  "name": "condition_history_condition_check_c3464631",
+                  "prefix": "condition_history_condition_check"
+                }
+              ],
+              "columns": {
+                "assetId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "condition": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AssetCondition",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "notes": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "recordedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "recordedBy": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "assetId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "condition_history"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "assets"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "assetId"
+                  ],
+                  "name": "condition_history_assetId_idx_4ebe630a",
+                  "prefix": "condition_history_assetId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "recordedAt"
+                  ],
+                  "name": "condition_history_recordedAt_idx_fd5b4732",
+                  "prefix": "condition_history_recordedAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "employees": {
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "department": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "designation": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "email": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "employeeCode": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "isActive": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "phone": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [
+                {
+                  "columns": [
+                    "department"
+                  ],
+                  "name": "employees_department_idx_1676f947",
+                  "prefix": "employees_department_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "isActive"
+                  ],
+                  "name": "employees_isActive_idx_77fe3ba1",
+                  "prefix": "employees_isActive_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "employeeCode"
+                  ]
+                },
+                {
+                  "columns": [
+                    "email"
+                  ]
+                }
+              ]
+            },
+            "return_requests": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED')",
+                  "name": "return_requests_status_check_aebcc8ed",
+                  "prefix": "return_requests_status_check"
+                }
+              ],
+              "columns": {
+                "assetId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "employeeId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "notes": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "processedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "reason": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "requestedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ReturnRequestStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "assetId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "return_requests"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "assets"
+                  }
+                },
+                {
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "employeeId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "return_requests"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "employees"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "assetId"
+                  ],
+                  "name": "return_requests_assetId_idx_4ebe630a",
+                  "prefix": "return_requests_assetId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "employeeId"
+                  ],
+                  "name": "return_requests_employeeId_idx_087dd4a6",
+                  "prefix": "return_requests_employeeId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "requestedAt"
+                  ],
+                  "name": "return_requests_requestedAt_idx_184b2d16",
+                  "prefix": "return_requests_requestedAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status"
+                  ],
+                  "name": "return_requests_status_idx_e98638ab",
+                  "prefix": "return_requests_status_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "service_records": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')",
+                  "name": "service_records_status_check_228d6925",
+                  "prefix": "service_records_status_check"
+                }
+              ],
+              "columns": {
+                "assetId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "cost": {
+                  "codecId": "pg/numeric@1",
+                  "nativeType": "numeric",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "issue": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "notes": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "openedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "resolution": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "resolvedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "OPEN"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ServiceRecordStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "vendor": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "restrict",
+                  "source": {
+                    "columns": [
+                      "assetId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "service_records"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "assets"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "assetId"
+                  ],
+                  "name": "service_records_assetId_idx_4ebe630a",
+                  "prefix": "service_records_assetId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "openedAt"
+                  ],
+                  "name": "service_records_openedAt_idx_64a04fed",
+                  "prefix": "service_records_openedAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status"
+                  ],
+                  "name": "service_records_status_idx_e98638ab",
+                  "prefix": "service_records_status_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            }
+          },
+          "valueSet": {
+            "AssetCategory": {
+              "kind": "valueSet",
+              "values": [
+                "LAPTOP",
+                "DESKTOP",
+                "MONITOR",
+                "MOBILE",
+                "TABLET",
+                "PRINTER",
+                "PERIPHERAL",
+                "SOFTWARE_LICENSE",
+                "OTHER"
+              ]
+            },
+            "AssetCondition": {
+              "kind": "valueSet",
+              "values": [
+                "EXCELLENT",
+                "GOOD",
+                "FAIR",
+                "DAMAGED"
+              ]
+            },
+            "AssetStatus": {
+              "kind": "valueSet",
+              "values": [
+                "AVAILABLE",
+                "ASSIGNED",
+                "IN_REPAIR",
+                "RETURN_REQUESTED",
+                "RETIRED"
+              ]
+            },
+            "AssetType": {
+              "kind": "valueSet",
+              "values": [
+                "HARDWARE",
+                "SOFTWARE"
+              ]
+            },
+            "AuditAction": {
+              "kind": "valueSet",
+              "values": [
+                "ASSET_CREATED",
+                "ASSET_UPDATED",
+                "ASSET_DELETED",
+                "ASSET_ASSIGNED",
+                "ASSET_RETURN_REQUESTED",
+                "ASSET_RETURNED",
+                "ASSET_SENT_TO_REPAIR",
+                "ASSET_REPAIR_COMPLETED",
+                "ASSET_RETIRED",
+                "CONDITION_UPDATED"
+              ]
+            },
+            "ReturnRequestStatus": {
+              "kind": "valueSet",
+              "values": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "COMPLETED"
+              ]
+            },
+            "ServiceRecordStatus": {
+              "kind": "valueSet",
+              "values": [
+                "OPEN",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        },
+        "id": "public",
+        "kind": "postgres-schema"
+      }
+    },
+    "storageHash": "c0f9a2a5a219d9467c3a45f6e8e0440fc3e21cbfa617621ac53371f4f1e1a8f3"
+  },
+  "execution": {
+    "executionHash": "47c0f2fbb9850a4892b80bffb91f342f1d5abba04fdc9d1d8e5ba7b60a8e8cf0",
+    "mutations": {
+      "defaults": [
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "assets"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "assignments"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "audit_logs"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "condition_history"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "employees"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "return_requests"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "service_records"
+          }
+        }
+      ]
+    }
+  },
+  "capabilities": {
+    "postgres": {
+      "distinctOn": true,
+      "jsonAgg": true,
+      "lateral": true,
+      "limit": true,
+      "orderBy": true,
+      "returning": true
+    },
+    "sql": {
+      "checkConstraint": true,
+      "defaultInInsert": true,
+      "enums": true,
+      "lateral": true,
+      "returning": true,
+      "scalarList": true
+    }
+  },
+  "extensions": {},
+  "meta": {},
+  "_generated": {
+    "warning": "⚠️  GENERATED FILE - DO NOT EDIT",
+    "message": "This file is automatically generated by \"prisma contract emit\".",
+    "regenerate": "To regenerate, run: prisma contract emit"
+  }
+}
