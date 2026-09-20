@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, Plus, X, Pencil } from "lucide-react";
+import { AlertCircle, Loader2, Plus, X, Pencil, UserPlus } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface Employee {
-  id: string;
-  employeeCode: string;
-  name: string;
-  email: string;
-  department: string;
-  designation: string | null;
-  phone: string | null;
-  isActive: boolean;
-}
 
 interface Asset {
   id: string;
@@ -50,12 +39,13 @@ interface Asset {
   licenseKey: string | null;
   licenseExpiry: string | null;
   condition: "EXCELLENT" | "GOOD" | "FAIR" | "DAMAGED";
-  status:
-    | "AVAILABLE"
-    | "ASSIGNED"
-    | "IN_REPAIR"
-    | "RETURN_REQUESTED"
-    | "RETIRED";
+  status: "AVAILABLE" | "ASSIGNED" | "IN_REPAIR" | "RETURN_REQUESTED" | "RETIRED";
+}
+
+interface Employee {
+  id: string;
+  employeeCode: string;
+  name: string;
 }
 
 const ASSET_TYPES = ["HARDWARE", "SOFTWARE"] as const;
@@ -100,6 +90,13 @@ interface AssetFormState {
   status: string;
 }
 
+interface AssignFormState {
+  employeeId: string;
+  assignedAt: string;
+  assignedCondition: string;
+  notes: string;
+}
+
 function getInitialFormState(): AssetFormState {
   return {
     assetTag: "",
@@ -125,13 +122,13 @@ function toDateInputValue(value: string | null): string {
     return "";
   }
 
-  const date = new Date(value);
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
 
-  if (Number.isNaN(date.getTime())) {
-    return "";
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`;
   }
 
-  return date.toISOString().slice(0, 10);
+  return "";
 }
 
 function getFormStateFromAsset(asset: Asset): AssetFormState {
@@ -157,6 +154,22 @@ function getFormStateFromAsset(asset: Asset): AssetFormState {
   };
 }
 
+function toDateTimeLocalValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function getInitialAssignFormState(asset: Asset): AssignFormState {
+  return {
+    employeeId: "",
+    assignedAt: toDateTimeLocalValue(new Date()),
+    assignedCondition: asset.condition,
+    notes: "",
+  };
+}
+
 async function fetchAssets(): Promise<Asset[]> {
   const res = await fetch("/api/assets");
 
@@ -165,6 +178,16 @@ async function fetchAssets(): Promise<Asset[]> {
   }
 
   return res.json() as Promise<Asset[]>;
+}
+
+async function fetchEmployees(): Promise<Employee[]> {
+  const res = await fetch("/api/employees");
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch employees");
+  }
+
+  return res.json() as Promise<Employee[]>;
 }
 
 function getStatusBadgeVariant(
@@ -198,48 +221,20 @@ function validateAssetForm(formState: AssetFormState): {
     return { error: "Name is required.", purchasePriceValue: undefined };
   }
 
-  if (
-    !ASSET_TYPES.includes(
-      formState.assetType as (typeof ASSET_TYPES)[number]
-    )
-  ) {
-    return {
-      error: "Asset Type is required.",
-      purchasePriceValue: undefined,
-    };
+  if (!ASSET_TYPES.includes(formState.assetType as (typeof ASSET_TYPES)[number])) {
+    return { error: "Asset Type is required.", purchasePriceValue: undefined };
   }
 
-  if (
-    !ASSET_CATEGORIES.includes(
-      formState.category as (typeof ASSET_CATEGORIES)[number]
-    )
-  ) {
-    return {
-      error: "Category is required.",
-      purchasePriceValue: undefined,
-    };
+  if (!ASSET_CATEGORIES.includes(formState.category as (typeof ASSET_CATEGORIES)[number])) {
+    return { error: "Category is required.", purchasePriceValue: undefined };
   }
 
-  if (
-    !ASSET_CONDITIONS.includes(
-      formState.condition as (typeof ASSET_CONDITIONS)[number]
-    )
-  ) {
-    return {
-      error: "Condition is required.",
-      purchasePriceValue: undefined,
-    };
+  if (!ASSET_CONDITIONS.includes(formState.condition as (typeof ASSET_CONDITIONS)[number])) {
+    return { error: "Condition is required.", purchasePriceValue: undefined };
   }
 
-  if (
-    !ASSET_STATUSES.includes(
-      formState.status as (typeof ASSET_STATUSES)[number]
-    )
-  ) {
-    return {
-      error: "Status is required.",
-      purchasePriceValue: undefined,
-    };
+  if (!ASSET_STATUSES.includes(formState.status as (typeof ASSET_STATUSES)[number])) {
+    return { error: "Status is required.", purchasePriceValue: undefined };
   }
 
   let purchasePriceValue: number | undefined;
@@ -312,14 +307,45 @@ function buildAssetPayload(
   return payload;
 }
 
-function getCurrentDateTimeLocal(): string {
-  const now = new Date();
+function buildEditAssetPayload(
+  formState: AssetFormState,
+  purchasePriceValue: number | undefined
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    assetTag: formState.assetTag.trim(),
+    name: formState.name.trim(),
+    assetType: formState.assetType,
+    category: formState.category,
+    condition: formState.condition,
+    status: formState.status,
+  };
 
-  const localDate = new Date(
-    now.getTime() - now.getTimezoneOffset() * 60 * 1000
-  );
+  payload.manufacturer =
+    formState.manufacturer.trim().length > 0 ? formState.manufacturer.trim() : null;
 
-  return localDate.toISOString().slice(0, 16);
+  payload.model = formState.model.trim().length > 0 ? formState.model.trim() : null;
+
+  payload.serialNumber =
+    formState.serialNumber.trim().length > 0 ? formState.serialNumber.trim() : null;
+
+  payload.description =
+    formState.description.trim().length > 0 ? formState.description.trim() : null;
+
+  payload.purchaseDate =
+    formState.purchaseDate.trim().length > 0 ? formState.purchaseDate : null;
+
+  payload.purchasePrice = purchasePriceValue !== undefined ? purchasePriceValue : null;
+
+  payload.warrantyExpiry =
+    formState.warrantyExpiry.trim().length > 0 ? formState.warrantyExpiry : null;
+
+  payload.licenseKey =
+    formState.licenseKey.trim().length > 0 ? formState.licenseKey.trim() : null;
+
+  payload.licenseExpiry =
+    formState.licenseExpiry.trim().length > 0 ? formState.licenseExpiry : null;
+
+  return payload;
 }
 
 export default function AssetsPage() {
@@ -328,29 +354,29 @@ export default function AssetsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formState, setFormState] =
-    useState<AssetFormState>(getInitialFormState());
+  const [formState, setFormState] = useState<AssetFormState>(getInitialFormState());
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
-  const [editFormState, setEditFormState] =
-    useState<AssetFormState>(getInitialFormState());
+  const [editFormState, setEditFormState] = useState<AssetFormState>(getInitialFormState());
   const [editFormError, setEditFormError] = useState<string | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
-  // Assign Asset state
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [isEmployeesLoading, setIsEmployeesLoading] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [assigningAsset, setAssigningAsset] = useState<Asset | null>(null);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
-  const [assignedAt, setAssignedAt] = useState("");
-  const [assignedCondition, setAssignedCondition] = useState("");
-  const [assignmentNotes, setAssignmentNotes] = useState("");
+  const [assignFormState, setAssignFormState] = useState<AssignFormState>({
+    employeeId: "",
+    assignedAt: "",
+    assignedCondition: "GOOD",
+    notes: "",
+  });
   const [assignFormError, setAssignFormError] = useState<string | null>(null);
   const [isAssignSubmitting, setIsAssignSubmitting] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isEmployeesLoading, setIsEmployeesLoading] = useState(false);
+  const [employeesError, setEmployeesError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -367,11 +393,8 @@ export default function AssetsPage() {
         }
       } catch (err) {
         if (!isMounted) return;
-
         console.error("Failed to load assets:", err);
-        setError(
-          "Unable to load assets right now. Please try again later."
-        );
+        setError("Unable to load assets right now. Please try again later.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -386,67 +409,16 @@ export default function AssetsPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isAssignDialogOpen) {
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadEmployees() {
-      setIsEmployeesLoading(true);
-
-      try {
-        const res = await fetch("/api/employees");
-
-        if (!res.ok) {
-          throw new Error("Failed to fetch employees");
-        }
-
-        const data = (await res.json()) as Employee[];
-
-        if (isMounted) {
-          setEmployees(data.filter((employee) => employee.isActive));
-        }
-      } catch (err) {
-        if (!isMounted) return;
-
-        console.error("Failed to load employees:", err);
-        setAssignFormError(
-          "Unable to load employees right now. Please try again."
-        );
-      } finally {
-        if (isMounted) {
-          setIsEmployeesLoading(false);
-        }
-      }
-    }
-
-    loadEmployees();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isAssignDialogOpen]);
-
-  function updateField<K extends keyof AssetFormState>(
-    field: K,
-    value: string
-  ) {
-    setFormState((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  function updateField<K extends keyof AssetFormState>(field: K, value: string) {
+    setFormState((prev) => ({ ...prev, [field]: value }));
   }
 
-  function updateEditField<K extends keyof AssetFormState>(
-    field: K,
-    value: string
-  ) {
-    setEditFormState((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  function updateEditField<K extends keyof AssetFormState>(field: K, value: string) {
+    setEditFormState((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function updateAssignField<K extends keyof AssignFormState>(field: K, value: string) {
+    setAssignFormState((prev) => ({ ...prev, [field]: value }));
   }
 
   function openDialog() {
@@ -457,7 +429,6 @@ export default function AssetsPage() {
 
   function closeDialog() {
     if (isSubmitting) return;
-
     setIsDialogOpen(false);
   }
 
@@ -470,30 +441,33 @@ export default function AssetsPage() {
 
   function closeEditDialog() {
     if (isEditSubmitting) return;
-
     setIsEditDialogOpen(false);
     setEditingAssetId(null);
   }
 
-  function openAssignDialog(asset: Asset) {
+  async function openAssignDialog(asset: Asset) {
     setAssigningAsset(asset);
-    setSelectedEmployeeId("");
-    setAssignedAt(getCurrentDateTimeLocal());
-    setAssignedCondition(asset.condition);
-    setAssignmentNotes("");
+    setAssignFormState(getInitialAssignFormState(asset));
     setAssignFormError(null);
     setIsAssignDialogOpen(true);
+    setEmployeesError(null);
+    setIsEmployeesLoading(true);
+
+    try {
+      const data = await fetchEmployees();
+      setEmployees(data);
+    } catch (err) {
+      console.error("Failed to load employees:", err);
+      setEmployeesError("Unable to load employees right now.");
+    } finally {
+      setIsEmployeesLoading(false);
+    }
   }
 
   function closeAssignDialog() {
     if (isAssignSubmitting) return;
-
     setIsAssignDialogOpen(false);
     setAssigningAsset(null);
-    setSelectedEmployeeId("");
-    setAssignedAt("");
-    setAssignedCondition("");
-    setAssignmentNotes("");
     setAssignFormError(null);
   }
 
@@ -501,20 +475,14 @@ export default function AssetsPage() {
     e.preventDefault();
     setFormError(null);
 
-    const {
-      error: validationError,
-      purchasePriceValue,
-    } = validateAssetForm(formState);
+    const { error: validationError, purchasePriceValue } = validateAssetForm(formState);
 
     if (validationError) {
       setFormError(validationError);
       return;
     }
 
-    const payload = buildAssetPayload(
-      formState,
-      purchasePriceValue
-    );
+    const payload = buildAssetPayload(formState, purchasePriceValue);
 
     setIsSubmitting(true);
 
@@ -529,31 +497,24 @@ export default function AssetsPage() {
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
-
         const message =
-          errorBody &&
-          typeof errorBody.message === "string"
+          errorBody && typeof errorBody.message === "string"
             ? errorBody.message
             : "Failed to create asset. Please check the form and try again.";
-
         setFormError(message);
         setIsSubmitting(false);
         return;
       }
 
       const updatedAssets = await fetchAssets();
-
       setAssets(updatedAssets);
+
       setIsSubmitting(false);
       setIsDialogOpen(false);
       setFormState(getInitialFormState());
     } catch (err) {
       console.error("Failed to create asset:", err);
-
-      setFormError(
-        "Unable to create asset right now. Please try again."
-      );
-
+      setFormError("Unable to create asset right now. Please try again.");
       setIsSubmitting(false);
     }
   }
@@ -566,63 +527,47 @@ export default function AssetsPage() {
       return;
     }
 
-    const {
-      error: validationError,
-      purchasePriceValue,
-    } = validateAssetForm(editFormState);
+    const { error: validationError, purchasePriceValue } = validateAssetForm(editFormState);
 
     if (validationError) {
       setEditFormError(validationError);
       return;
     }
 
-    const payload = buildAssetPayload(
-      editFormState,
-      purchasePriceValue
-    );
+    const payload = buildEditAssetPayload(editFormState, purchasePriceValue);
 
     setIsEditSubmitting(true);
 
     try {
-      const res = await fetch(
-        `/api/assets/${editingAssetId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`/api/assets/${editingAssetId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
-
         const message =
-          errorBody &&
-          typeof errorBody.message === "string"
+          errorBody && typeof errorBody.message === "string"
             ? errorBody.message
             : "Failed to update asset. Please check the form and try again.";
-
         setEditFormError(message);
         setIsEditSubmitting(false);
         return;
       }
 
       const updatedAssets = await fetchAssets();
-
       setAssets(updatedAssets);
+
       setIsEditSubmitting(false);
       setIsEditDialogOpen(false);
       setEditingAssetId(null);
       setEditFormState(getInitialFormState());
     } catch (err) {
       console.error("Failed to update asset:", err);
-
-      setEditFormError(
-        "Unable to update asset right now. Please try again."
-      );
-
+      setEditFormError("Unable to update asset right now. Please try again.");
       setIsEditSubmitting(false);
     }
   }
@@ -632,45 +577,40 @@ export default function AssetsPage() {
     setAssignFormError(null);
 
     if (!assigningAsset) {
-      setAssignFormError("No asset selected.");
       return;
     }
 
-    if (!selectedEmployeeId) {
-      setAssignFormError("Employee is required.");
+    if (assignFormState.employeeId.trim().length === 0) {
+      setAssignFormError("Please select an employee.");
       return;
     }
 
-    if (!assignedAt.trim()) {
-      setAssignFormError("Assigned At is required.");
-      return;
-    }
-
-    const assignedAtDate = new Date(assignedAt);
-
-    if (Number.isNaN(assignedAtDate.getTime())) {
-      setAssignFormError("Assigned At must be a valid date and time.");
+    if (
+      assignFormState.assignedAt.trim().length === 0 ||
+      Number.isNaN(Date.parse(assignFormState.assignedAt))
+    ) {
+      setAssignFormError("Please provide a valid Assigned At date/time.");
       return;
     }
 
     if (
       !ASSET_CONDITIONS.includes(
-        assignedCondition as (typeof ASSET_CONDITIONS)[number]
+        assignFormState.assignedCondition as (typeof ASSET_CONDITIONS)[number]
       )
     ) {
-      setAssignFormError("Assigned Condition is required.");
+      setAssignFormError("Please select a valid Assigned Condition.");
       return;
     }
 
     const payload: Record<string, unknown> = {
       assetId: assigningAsset.id,
-      employeeId: selectedEmployeeId,
-      assignedAt: assignedAtDate.toISOString(),
-      assignedCondition,
+      employeeId: assignFormState.employeeId,
+      assignedAt: new Date(assignFormState.assignedAt).toISOString(),
+      assignedCondition: assignFormState.assignedCondition,
     };
 
-    if (assignmentNotes.trim().length > 0) {
-      payload.notes = assignmentNotes.trim();
+    if (assignFormState.notes.trim().length > 0) {
+      payload.notes = assignFormState.notes.trim();
     }
 
     setIsAssignSubmitting(true);
@@ -686,36 +626,30 @@ export default function AssetsPage() {
 
       if (!res.ok) {
         const errorBody = await res.json().catch(() => null);
-
         const message =
-          errorBody &&
-          typeof errorBody.message === "string"
+          errorBody && typeof errorBody.message === "string"
             ? errorBody.message
-            : "Failed to assign asset. Please check the form and try again.";
-
+            : "Failed to assign asset. Please try again.";
         setAssignFormError(message);
         setIsAssignSubmitting(false);
         return;
       }
 
       const updatedAssets = await fetchAssets();
-
       setAssets(updatedAssets);
+
       setIsAssignSubmitting(false);
       setIsAssignDialogOpen(false);
       setAssigningAsset(null);
-      setSelectedEmployeeId("");
-      setAssignedAt("");
-      setAssignedCondition("");
-      setAssignmentNotes("");
-      setAssignFormError(null);
+      setAssignFormState({
+        employeeId: "",
+        assignedAt: "",
+        assignedCondition: "GOOD",
+        notes: "",
+      });
     } catch (err) {
       console.error("Failed to assign asset:", err);
-
-      setAssignFormError(
-        "Unable to assign asset right now. Please try again."
-      );
-
+      setAssignFormError("Unable to assign asset right now. Please try again.");
       setIsAssignSubmitting(false);
     }
   }
@@ -728,17 +662,12 @@ export default function AssetsPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground">
               Assets
             </h1>
-
             <p className="text-sm text-muted-foreground">
               View and track all hardware and software assets in your
               organization.
             </p>
           </div>
-
-          <Button
-            onClick={openDialog}
-            className="w-full sm:w-auto"
-          >
+          <Button onClick={openDialog} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Asset
           </Button>
@@ -747,25 +676,18 @@ export default function AssetsPage() {
         {isLoading ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin" />
-
-            <p className="text-sm">
-              Loading assets...
-            </p>
+            <p className="text-sm">Loading assets...</p>
           </div>
         ) : error ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-destructive" />
-
-            <p className="text-sm font-medium text-foreground">
-              {error}
-            </p>
+            <p className="text-sm font-medium text-foreground">{error}</p>
           </div>
         ) : assets.length === 0 ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
             <p className="text-sm font-medium text-foreground">
               No assets found
             </p>
-
             <p className="text-sm text-muted-foreground">
               Assets will appear here once they are added.
             </p>
@@ -787,54 +709,35 @@ export default function AssetsPage() {
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
-
               <TableBody>
                 {assets.map((asset) => (
                   <TableRow key={asset.id}>
                     <TableCell className="font-medium text-foreground">
                       {asset.assetTag}
                     </TableCell>
-
+                    <TableCell>{asset.name}</TableCell>
+                    <TableCell>{asset.assetType}</TableCell>
+                    <TableCell>{asset.category}</TableCell>
+                    <TableCell>{asset.manufacturer ?? "—"}</TableCell>
+                    <TableCell>{asset.model ?? "—"}</TableCell>
+                    <TableCell>{asset.serialNumber ?? "—"}</TableCell>
+                    <TableCell>{asset.condition}</TableCell>
                     <TableCell>
-                      {asset.name}
-                    </TableCell>
-
-                    <TableCell>
-                      {asset.assetType}
-                    </TableCell>
-
-                    <TableCell>
-                      {asset.category}
-                    </TableCell>
-
-                    <TableCell>
-                      {asset.manufacturer ?? "—"}
-                    </TableCell>
-
-                    <TableCell>
-                      {asset.model ?? "—"}
-                    </TableCell>
-
-                    <TableCell>
-                      {asset.serialNumber ?? "—"}
-                    </TableCell>
-
-                    <TableCell>
-                      {asset.condition}
-                    </TableCell>
-
-                    <TableCell>
-                      <Badge
-                        variant={getStatusBadgeVariant(
-                          asset.status
-                        )}
-                      >
+                      <Badge variant={getStatusBadgeVariant(asset.status)}>
                         {asset.status.replace(/_/g, " ")}
                       </Badge>
                     </TableCell>
-
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(asset)}
+                        >
+                          <Pencil className="mr-2 h-3 w-3" />
+                          Edit
+                        </Button>
                         {asset.status === "AVAILABLE" && (
                           <Button
                             type="button"
@@ -842,21 +745,10 @@ export default function AssetsPage() {
                             size="sm"
                             onClick={() => openAssignDialog(asset)}
                           >
+                            <UserPlus className="mr-2 h-3 w-3" />
                             Assign
                           </Button>
                         )}
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            openEditDialog(asset)
-                          }
-                        >
-                          <Pencil className="mr-2 h-3 w-3" />
-                          Edit
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -880,7 +772,6 @@ export default function AssetsPage() {
               <h2 className="text-lg font-semibold text-foreground">
                 Add Asset
               </h2>
-
               <button
                 type="button"
                 onClick={closeDialog}
@@ -892,94 +783,57 @@ export default function AssetsPage() {
               </button>
             </div>
 
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col gap-4"
-            >
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {formError && (
                 <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
                   <span>{formError}</span>
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="assetTag"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="assetTag" className="text-sm font-medium text-foreground">
                     Asset Tag
                   </label>
-
                   <input
                     id="assetTag"
                     type="text"
                     value={formState.assetTag}
-                    onChange={(e) =>
-                      updateField(
-                        "assetTag",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("assetTag", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="name"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="name" className="text-sm font-medium text-foreground">
                     Name
                   </label>
-
                   <input
                     id="name"
                     type="text"
                     value={formState.name}
-                    onChange={(e) =>
-                      updateField(
-                        "name",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("name", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="assetType"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="assetType" className="text-sm font-medium text-foreground">
                     Asset Type
                   </label>
-
                   <select
                     id="assetType"
                     value={formState.assetType}
-                    onChange={(e) =>
-                      updateField(
-                        "assetType",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("assetType", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    <option value="">
-                      Select type
-                    </option>
-
+                    <option value="">Select type</option>
                     {ASSET_TYPES.map((type) => (
-                      <option
-                        key={type}
-                        value={type}
-                      >
+                      <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
@@ -987,295 +841,172 @@ export default function AssetsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="category"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="category" className="text-sm font-medium text-foreground">
                     Category
                   </label>
-
                   <select
                     id="category"
                     value={formState.category}
-                    onChange={(e) =>
-                      updateField(
-                        "category",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("category", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    <option value="">
-                      Select category
-                    </option>
-
-                    {ASSET_CATEGORIES.map(
-                      (category) => (
-                        <option
-                          key={category}
-                          value={category}
-                        >
-                          {category.replace(
-                            /_/g,
-                            " "
-                          )}
-                        </option>
-                      )
-                    )}
+                    <option value="">Select category</option>
+                    {ASSET_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category.replace(/_/g, " ")}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="condition"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="condition" className="text-sm font-medium text-foreground">
                     Condition
                   </label>
-
                   <select
                     id="condition"
                     value={formState.condition}
-                    onChange={(e) =>
-                      updateField(
-                        "condition",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("condition", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    {ASSET_CONDITIONS.map(
-                      (condition) => (
-                        <option
-                          key={condition}
-                          value={condition}
-                        >
-                          {condition}
-                        </option>
-                      )
-                    )}
+                    {ASSET_CONDITIONS.map((condition) => (
+                      <option key={condition} value={condition}>
+                        {condition}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="status"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="status" className="text-sm font-medium text-foreground">
                     Status
                   </label>
-
                   <select
                     id="status"
                     value={formState.status}
-                    onChange={(e) =>
-                      updateField(
-                        "status",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("status", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    {ASSET_STATUSES.map(
-                      (status) => (
-                        <option
-                          key={status}
-                          value={status}
-                        >
-                          {status.replace(
-                            /_/g,
-                            " "
-                          )}
-                        </option>
-                      )
-                    )}
+                    {ASSET_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {status.replace(/_/g, " ")}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="manufacturer"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="manufacturer" className="text-sm font-medium text-foreground">
                     Manufacturer
                   </label>
-
                   <input
                     id="manufacturer"
                     type="text"
                     value={formState.manufacturer}
-                    onChange={(e) =>
-                      updateField(
-                        "manufacturer",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("manufacturer", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="model"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="model" className="text-sm font-medium text-foreground">
                     Model
                   </label>
-
                   <input
                     id="model"
                     type="text"
                     value={formState.model}
-                    onChange={(e) =>
-                      updateField(
-                        "model",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("model", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="serialNumber"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="serialNumber" className="text-sm font-medium text-foreground">
                     Serial Number
                   </label>
-
                   <input
                     id="serialNumber"
                     type="text"
                     value={formState.serialNumber}
-                    onChange={(e) =>
-                      updateField(
-                        "serialNumber",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("serialNumber", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="purchasePrice"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="purchasePrice" className="text-sm font-medium text-foreground">
                     Purchase Price
                   </label>
-
                   <input
                     id="purchasePrice"
                     type="number"
                     min="0"
                     step="0.01"
                     value={formState.purchasePrice}
-                    onChange={(e) =>
-                      updateField(
-                        "purchasePrice",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("purchasePrice", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="purchaseDate"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="purchaseDate" className="text-sm font-medium text-foreground">
                     Purchase Date
                   </label>
-
                   <input
                     id="purchaseDate"
                     type="date"
                     value={formState.purchaseDate}
-                    onChange={(e) =>
-                      updateField(
-                        "purchaseDate",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("purchaseDate", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="warrantyExpiry"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="warrantyExpiry" className="text-sm font-medium text-foreground">
                     Warranty Expiry
                   </label>
-
                   <input
                     id="warrantyExpiry"
                     type="date"
                     value={formState.warrantyExpiry}
-                    onChange={(e) =>
-                      updateField(
-                        "warrantyExpiry",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("warrantyExpiry", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="licenseKey"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="licenseKey" className="text-sm font-medium text-foreground">
                     License Key
                   </label>
-
                   <input
                     id="licenseKey"
                     type="text"
                     value={formState.licenseKey}
-                    onChange={(e) =>
-                      updateField(
-                        "licenseKey",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("licenseKey", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="licenseExpiry"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="licenseExpiry" className="text-sm font-medium text-foreground">
                     License Expiry
                   </label>
-
                   <input
                     id="licenseExpiry"
                     type="date"
                     value={formState.licenseExpiry}
-                    onChange={(e) =>
-                      updateField(
-                        "licenseExpiry",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateField("licenseExpiry", e.target.value)}
                     disabled={isSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
@@ -1283,22 +1014,13 @@ export default function AssetsPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="description"
-                  className="text-sm font-medium text-foreground"
-                >
+                <label htmlFor="description" className="text-sm font-medium text-foreground">
                   Description
                 </label>
-
                 <textarea
                   id="description"
                   value={formState.description}
-                  onChange={(e) =>
-                    updateField(
-                      "description",
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => updateField("description", e.target.value)}
                   disabled={isSubmitting}
                   rows={3}
                   className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
@@ -1314,11 +1036,7 @@ export default function AssetsPage() {
                 >
                   Cancel
                 </Button>
-
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                >
+                <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1347,7 +1065,6 @@ export default function AssetsPage() {
               <h2 className="text-lg font-semibold text-foreground">
                 Edit Asset
               </h2>
-
               <button
                 type="button"
                 onClick={closeEditDialog}
@@ -1359,94 +1076,57 @@ export default function AssetsPage() {
               </button>
             </div>
 
-            <form
-              onSubmit={handleEditSubmit}
-              className="flex flex-col gap-4"
-            >
+            <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
               {editFormError && (
                 <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
                   <span>{editFormError}</span>
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-assetTag"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-assetTag" className="text-sm font-medium text-foreground">
                     Asset Tag
                   </label>
-
                   <input
                     id="edit-assetTag"
                     type="text"
                     value={editFormState.assetTag}
-                    onChange={(e) =>
-                      updateEditField(
-                        "assetTag",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("assetTag", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-name"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-name" className="text-sm font-medium text-foreground">
                     Name
                   </label>
-
                   <input
                     id="edit-name"
                     type="text"
                     value={editFormState.name}
-                    onChange={(e) =>
-                      updateEditField(
-                        "name",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("name", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-assetType"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-assetType" className="text-sm font-medium text-foreground">
                     Asset Type
                   </label>
-
                   <select
                     id="edit-assetType"
                     value={editFormState.assetType}
-                    onChange={(e) =>
-                      updateEditField(
-                        "assetType",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("assetType", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    <option value="">
-                      Select type
-                    </option>
-
+                    <option value="">Select type</option>
                     {ASSET_TYPES.map((type) => (
-                      <option
-                        key={type}
-                        value={type}
-                      >
+                      <option key={type} value={type}>
                         {type}
                       </option>
                     ))}
@@ -1454,295 +1134,172 @@ export default function AssetsPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-category"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-category" className="text-sm font-medium text-foreground">
                     Category
                   </label>
-
                   <select
                     id="edit-category"
                     value={editFormState.category}
-                    onChange={(e) =>
-                      updateEditField(
-                        "category",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("category", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    <option value="">
-                      Select category
-                    </option>
-
-                    {ASSET_CATEGORIES.map(
-                      (category) => (
-                        <option
-                          key={category}
-                          value={category}
-                        >
-                          {category.replace(
-                            /_/g,
-                            " "
-                          )}
-                        </option>
-                      )
-                    )}
+                    <option value="">Select category</option>
+                    {ASSET_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category.replace(/_/g, " ")}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-condition"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-condition" className="text-sm font-medium text-foreground">
                     Condition
                   </label>
-
                   <select
                     id="edit-condition"
                     value={editFormState.condition}
-                    onChange={(e) =>
-                      updateEditField(
-                        "condition",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("condition", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    {ASSET_CONDITIONS.map(
-                      (condition) => (
-                        <option
-                          key={condition}
-                          value={condition}
-                        >
-                          {condition}
-                        </option>
-                      )
-                    )}
+                    {ASSET_CONDITIONS.map((condition) => (
+                      <option key={condition} value={condition}>
+                        {condition}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-status"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-status" className="text-sm font-medium text-foreground">
                     Status
                   </label>
-
                   <select
                     id="edit-status"
                     value={editFormState.status}
-                    onChange={(e) =>
-                      updateEditField(
-                        "status",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("status", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   >
-                    {ASSET_STATUSES.map(
-                      (status) => (
-                        <option
-                          key={status}
-                          value={status}
-                        >
-                          {status.replace(
-                            /_/g,
-                            " "
-                          )}
-                        </option>
-                      )
-                    )}
+                    {ASSET_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {status.replace(/_/g, " ")}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-manufacturer"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-manufacturer" className="text-sm font-medium text-foreground">
                     Manufacturer
                   </label>
-
                   <input
                     id="edit-manufacturer"
                     type="text"
                     value={editFormState.manufacturer}
-                    onChange={(e) =>
-                      updateEditField(
-                        "manufacturer",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("manufacturer", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-model"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-model" className="text-sm font-medium text-foreground">
                     Model
                   </label>
-
                   <input
                     id="edit-model"
                     type="text"
                     value={editFormState.model}
-                    onChange={(e) =>
-                      updateEditField(
-                        "model",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("model", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-serialNumber"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-serialNumber" className="text-sm font-medium text-foreground">
                     Serial Number
                   </label>
-
                   <input
                     id="edit-serialNumber"
                     type="text"
                     value={editFormState.serialNumber}
-                    onChange={(e) =>
-                      updateEditField(
-                        "serialNumber",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("serialNumber", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-purchasePrice"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-purchasePrice" className="text-sm font-medium text-foreground">
                     Purchase Price
                   </label>
-
                   <input
                     id="edit-purchasePrice"
                     type="number"
                     min="0"
                     step="0.01"
                     value={editFormState.purchasePrice}
-                    onChange={(e) =>
-                      updateEditField(
-                        "purchasePrice",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("purchasePrice", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-purchaseDate"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-purchaseDate" className="text-sm font-medium text-foreground">
                     Purchase Date
                   </label>
-
                   <input
                     id="edit-purchaseDate"
                     type="date"
                     value={editFormState.purchaseDate}
-                    onChange={(e) =>
-                      updateEditField(
-                        "purchaseDate",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("purchaseDate", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-warrantyExpiry"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-warrantyExpiry" className="text-sm font-medium text-foreground">
                     Warranty Expiry
                   </label>
-
                   <input
                     id="edit-warrantyExpiry"
                     type="date"
                     value={editFormState.warrantyExpiry}
-                    onChange={(e) =>
-                      updateEditField(
-                        "warrantyExpiry",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("warrantyExpiry", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-licenseKey"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-licenseKey" className="text-sm font-medium text-foreground">
                     License Key
                   </label>
-
                   <input
                     id="edit-licenseKey"
                     type="text"
                     value={editFormState.licenseKey}
-                    onChange={(e) =>
-                      updateEditField(
-                        "licenseKey",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("licenseKey", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-licenseExpiry"
-                    className="text-sm font-medium text-foreground"
-                  >
+                  <label htmlFor="edit-licenseExpiry" className="text-sm font-medium text-foreground">
                     License Expiry
                   </label>
-
                   <input
                     id="edit-licenseExpiry"
                     type="date"
                     value={editFormState.licenseExpiry}
-                    onChange={(e) =>
-                      updateEditField(
-                        "licenseExpiry",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => updateEditField("licenseExpiry", e.target.value)}
                     disabled={isEditSubmitting}
                     className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                   />
@@ -1750,22 +1307,13 @@ export default function AssetsPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="edit-description"
-                  className="text-sm font-medium text-foreground"
-                >
+                <label htmlFor="edit-description" className="text-sm font-medium text-foreground">
                   Description
                 </label>
-
                 <textarea
                   id="edit-description"
                   value={editFormState.description}
-                  onChange={(e) =>
-                    updateEditField(
-                      "description",
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => updateEditField("description", e.target.value)}
                   disabled={isEditSubmitting}
                   rows={3}
                   className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
@@ -1781,11 +1329,7 @@ export default function AssetsPage() {
                 >
                   Cancel
                 </Button>
-
-                <Button
-                  type="submit"
-                  disabled={isEditSubmitting}
-                >
+                <Button type="submit" disabled={isEditSubmitting}>
                   {isEditSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1807,224 +1351,135 @@ export default function AssetsPage() {
           onClick={closeAssignDialog}
         >
           <div
-            className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-y-auto rounded-lg border bg-background p-6 shadow-lg"
+            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-lg border bg-background p-6 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  Assign Asset
-                </h2>
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Assign this asset to an employee.
-                </p>
-              </div>
-
+              <h2 className="text-lg font-semibold text-foreground">
+                Assign Asset
+              </h2>
               <button
                 type="button"
                 onClick={closeAssignDialog}
                 disabled={isAssignSubmitting}
-                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                className="text-muted-foreground hover:text-foreground"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form
-              onSubmit={handleAssignSubmit}
-              className="flex flex-col gap-4"
-            >
+            <div className="mb-4 flex flex-col gap-1 rounded-md border bg-muted/40 p-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Asset Tag</span>
+                <span className="font-medium text-foreground">
+                  {assigningAsset.assetTag}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Name</span>
+                <span className="font-medium text-foreground">
+                  {assigningAsset.name}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Category</span>
+                <span className="font-medium text-foreground">
+                  {assigningAsset.category.replace(/_/g, " ")}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current Status</span>
+                <Badge variant={getStatusBadgeVariant(assigningAsset.status)}>
+                  {assigningAsset.status.replace(/_/g, " ")}
+                </Badge>
+              </div>
+            </div>
+
+            <form onSubmit={handleAssignSubmit} className="flex flex-col gap-4">
               {assignFormError && (
                 <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-
                   <span>{assignFormError}</span>
                 </div>
               )}
 
-              <div className="rounded-md border bg-muted/30 p-4">
-                <h3 className="mb-3 text-sm font-semibold text-foreground">
-                  Asset Information
-                </h3>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Asset Tag
-                    </p>
-
-                    <p className="text-sm font-medium text-foreground">
-                      {assigningAsset.assetTag}
-                    </p>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="assign-employee" className="text-sm font-medium text-foreground">
+                  Employee
+                </label>
+                {isEmployeesLoading ? (
+                  <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading employees...
                   </div>
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Name
-                    </p>
-
-                    <p className="text-sm font-medium text-foreground">
-                      {assigningAsset.name}
-                    </p>
+                ) : employeesError ? (
+                  <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    {employeesError}
                   </div>
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Category
-                    </p>
-
-                    <p className="text-sm font-medium text-foreground">
-                      {assigningAsset.category.replace(
-                        /_/g,
-                        " "
-                      )}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      Current Status
-                    </p>
-
-                    <div className="mt-1">
-                      <Badge
-                        variant={getStatusBadgeVariant(
-                          assigningAsset.status
-                        )}
-                      >
-                        {assigningAsset.status.replace(
-                          /_/g,
-                          " "
-                        )}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <select
+                    id="assign-employee"
+                    value={assignFormState.employeeId}
+                    onChange={(e) => updateAssignField("employeeId", e.target.value)}
+                    disabled={isAssignSubmitting}
+                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  >
+                    <option value="">Select employee</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name} ({employee.employeeCode})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="assign-employee"
-                  className="text-sm font-medium text-foreground"
-                >
-                  Employee
+                <label htmlFor="assign-assignedAt" className="text-sm font-medium text-foreground">
+                  Assigned At
                 </label>
+                <input
+                  id="assign-assignedAt"
+                  type="datetime-local"
+                  value={assignFormState.assignedAt}
+                  onChange={(e) => updateAssignField("assignedAt", e.target.value)}
+                  disabled={isAssignSubmitting}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                />
+              </div>
 
+              <div className="flex flex-col gap-2">
+                <label htmlFor="assign-condition" className="text-sm font-medium text-foreground">
+                  Assigned Condition
+                </label>
                 <select
-                  id="assign-employee"
-                  value={selectedEmployeeId}
-                  onChange={(e) =>
-                    setSelectedEmployeeId(e.target.value)
-                  }
-                  disabled={
-                    isAssignSubmitting ||
-                    isEmployeesLoading
-                  }
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  id="assign-condition"
+                  value={assignFormState.assignedCondition}
+                  onChange={(e) => updateAssignField("assignedCondition", e.target.value)}
+                  disabled={isAssignSubmitting}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                 >
-                  <option value="">
-                    {isEmployeesLoading
-                      ? "Loading employees..."
-                      : "Select employee"}
-                  </option>
-
-                  {employees.map((employee) => (
-                    <option
-                      key={employee.id}
-                      value={employee.id}
-                    >
-                      {employee.name} ({employee.employeeCode})
+                  {ASSET_CONDITIONS.map((condition) => (
+                    <option key={condition} value={condition}>
+                      {condition}
                     </option>
                   ))}
                 </select>
-
-                {!isEmployeesLoading &&
-                  employees.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      No active employees are available for assignment.
-                    </p>
-                  )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="assigned-at"
-                    className="text-sm font-medium text-foreground"
-                  >
-                    Assigned At
-                  </label>
-
-                  <input
-                    id="assigned-at"
-                    type="datetime-local"
-                    value={assignedAt}
-                    onChange={(e) =>
-                      setAssignedAt(e.target.value)
-                    }
-                    disabled={isAssignSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="assigned-condition"
-                    className="text-sm font-medium text-foreground"
-                  >
-                    Assigned Condition
-                  </label>
-
-                  <select
-                    id="assigned-condition"
-                    value={assignedCondition}
-                    onChange={(e) =>
-                      setAssignedCondition(e.target.value)
-                    }
-                    disabled={isAssignSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">
-                      Select condition
-                    </option>
-
-                    {ASSET_CONDITIONS.map(
-                      (condition) => (
-                        <option
-                          key={condition}
-                          value={condition}
-                        >
-                          {condition}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="assignment-notes"
-                  className="text-sm font-medium text-foreground"
-                >
+                <label htmlFor="assign-notes" className="text-sm font-medium text-foreground">
                   Notes
-                  <span className="ml-1 font-normal text-muted-foreground">
-                    (optional)
-                  </span>
                 </label>
-
                 <textarea
-                  id="assignment-notes"
-                  value={assignmentNotes}
-                  onChange={(e) =>
-                    setAssignmentNotes(e.target.value)
-                  }
+                  id="assign-notes"
+                  value={assignFormState.notes}
+                  onChange={(e) => updateAssignField("notes", e.target.value)}
                   disabled={isAssignSubmitting}
                   rows={3}
-                  placeholder="Add any notes about this assignment..."
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
                 />
               </div>
 
@@ -2037,15 +1492,7 @@ export default function AssetsPage() {
                 >
                   Cancel
                 </Button>
-
-                <Button
-                  type="submit"
-                  disabled={
-                    isAssignSubmitting ||
-                    isEmployeesLoading ||
-                    employees.length === 0
-                  }
-                >
+                <Button type="submit" disabled={isAssignSubmitting}>
                   {isAssignSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
