@@ -22,6 +22,8 @@ interface Employee {
   designation: string | null;
   phone: string | null;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 async function fetchEmployees(): Promise<Employee[]> {
