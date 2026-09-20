@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-import { db } from '@/prisma/db';
+import { db } from "@/prisma/db";
 
 const ALLOWED_FIELDS = [
-  'assetId',
-  'employeeId',
-  'reason',
-  'processedAt',
-  'notes',
+  "assetId",
+  "employeeId",
+  "reason",
+  "processedAt",
+  "notes",
 ] as const;
 
 const UUID_REGEX =
@@ -19,12 +19,12 @@ export async function GET() {
 
     return NextResponse.json(returnRequests, { status: 200 });
   } catch (error) {
-    console.error('Failed to fetch return requests:', error);
+    console.error("Failed to fetch return requests:", error);
 
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'Failed to fetch return requests',
+        status: "error",
+        message: "Failed to fetch return requests",
       },
       { status: 500 }
     );
@@ -37,22 +37,26 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch (error) {
-    console.error('Failed to parse request JSON:', error);
+    console.error("Failed to parse request JSON:", error);
 
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'Request body must be valid JSON',
+        status: "error",
+        message: "Request body must be valid JSON",
       },
       { status: 400 }
     );
   }
 
-  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    Array.isArray(body)
+  ) {
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'Request body must be a JSON object',
+        status: "error",
+        message: "Request body must be a JSON object",
       },
       { status: 400 }
     );
@@ -61,46 +65,64 @@ export async function POST(request: Request) {
   const data = body as Record<string, unknown>;
 
   const unknownFields = Object.keys(data).filter(
-    (key) => !ALLOWED_FIELDS.includes(key as (typeof ALLOWED_FIELDS)[number])
+    (key) =>
+      !ALLOWED_FIELDS.includes(
+        key as (typeof ALLOWED_FIELDS)[number]
+      )
   );
 
   if (unknownFields.length > 0) {
     return NextResponse.json(
       {
-        status: 'error',
-        message: `Unknown field(s): ${unknownFields.join(', ')}`,
+        status: "error",
+        message: `Unknown field(s): ${unknownFields.join(", ")}`,
       },
       { status: 400 }
     );
   }
 
-  const { assetId, employeeId, reason, processedAt, notes } = data;
+  const {
+    assetId,
+    employeeId,
+    reason,
+    processedAt,
+    notes,
+  } = data;
 
-  if (typeof assetId !== 'string' || !UUID_REGEX.test(assetId)) {
+  if (
+    typeof assetId !== "string" ||
+    !UUID_REGEX.test(assetId)
+  ) {
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'assetId is required and must be a valid UUID',
+        status: "error",
+        message: "assetId is required and must be a valid UUID",
       },
       { status: 400 }
     );
   }
 
-  if (typeof employeeId !== 'string' || !UUID_REGEX.test(employeeId)) {
+  if (
+    typeof employeeId !== "string" ||
+    !UUID_REGEX.test(employeeId)
+  ) {
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'employeeId is required and must be a valid UUID',
+        status: "error",
+        message: "employeeId is required and must be a valid UUID",
       },
       { status: 400 }
     );
   }
 
-  if (typeof reason !== 'string' || reason.trim().length === 0) {
+  if (
+    typeof reason !== "string" ||
+    reason.trim().length === 0
+  ) {
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'reason is required and must be a non-empty string',
+        status: "error",
+        message: "reason is required and must be a non-empty string",
       },
       { status: 400 }
     );
@@ -108,75 +130,72 @@ export async function POST(request: Request) {
 
   if (
     processedAt !== undefined &&
-    (typeof processedAt !== 'string' || Number.isNaN(Date.parse(processedAt)))
+    (typeof processedAt !== "string" ||
+      Number.isNaN(Date.parse(processedAt)))
   ) {
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'processedAt must be a valid date string if provided',
+        status: "error",
+        message: "processedAt must be a valid date string if provided",
       },
       { status: 400 }
     );
   }
 
-  if (notes !== undefined && typeof notes !== 'string') {
+  if (notes !== undefined && typeof notes !== "string") {
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'notes must be a string if provided',
+        status: "error",
+        message: "notes must be a string if provided",
       },
       { status: 400 }
     );
   }
 
-  const validatedData: Record<string, unknown> = {
+  const validatedData = {
     assetId,
     employeeId,
     reason,
-    status: 'PENDING',
+    status: "PENDING" as const,
     requestedAt: new Date().toISOString(),
+    ...(processedAt !== undefined && { processedAt }),
+    ...(notes !== undefined && { notes }),
   };
-
-  if (processedAt !== undefined) {
-    validatedData.processedAt = processedAt;
-  }
-
-  if (notes !== undefined) {
-    validatedData.notes = notes;
-  }
 
   try {
     const assets = await db.orm.public.Asset.all();
+
     const asset = assets.find((a) => a.id === assetId);
 
     if (!asset) {
       return NextResponse.json(
         {
-          status: 'error',
-          message: 'Asset not found',
+          status: "error",
+          message: "Asset not found",
         },
         { status: 404 }
       );
     }
 
     const employees = await db.orm.public.Employee.all();
+
     const employee = employees.find((e) => e.id === employeeId);
 
     if (!employee) {
       return NextResponse.json(
         {
-          status: 'error',
-          message: 'Employee not found',
+          status: "error",
+          message: "Employee not found",
         },
         { status: 404 }
       );
     }
 
-    if (asset.status !== 'ASSIGNED') {
+    if (asset.status !== "ASSIGNED") {
       return NextResponse.json(
         {
-          status: 'error',
-          message: 'Asset is not currently assigned',
+          status: "error",
+          message: "Asset is not currently assigned",
         },
         { status: 409 }
       );
@@ -194,8 +213,8 @@ export async function POST(request: Request) {
     if (!activeAssignment) {
       return NextResponse.json(
         {
-          status: 'error',
-          message: 'Employee is not currently assigned this asset',
+          status: "error",
+          message: "Employee is not currently assigned this asset",
         },
         { status: 409 }
       );
@@ -205,17 +224,17 @@ export async function POST(request: Request) {
       await db.orm.public.ReturnRequest.create(validatedData);
 
     await db.orm.public.Asset.where({ id: assetId }).update({
-      status: 'RETURN_REQUESTED',
+      status: "RETURN_REQUESTED",
     });
 
     return NextResponse.json(returnRequest, { status: 201 });
   } catch (error) {
-    console.error('Failed to create return request:', error);
+    console.error("Failed to create return request:", error);
 
     return NextResponse.json(
       {
-        status: 'error',
-        message: 'Failed to create return request',
+        status: "error",
+        message: "Failed to create return request",
       },
       { status: 500 }
     );
