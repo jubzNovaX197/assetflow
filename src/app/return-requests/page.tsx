@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -84,44 +85,67 @@ export default function ReturnRequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-    async function loadData() {
-      setIsLoading(true);
-      setError(null);
+  async function loadData() {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const [returnRequestsData, employeesData, assetsData] = await Promise.all([
-          fetchJson<ReturnRequest[]>("/api/return-requests"),
-          fetchJson<Employee[]>("/api/employees"),
-          fetchJson<Asset[]>("/api/assets"),
-        ]);
+    try {
+      const [returnRequestsData, employeesData, assetsData] = await Promise.all([
+        fetchJson<ReturnRequest[]>("/api/return-requests"),
+        fetchJson<Employee[]>("/api/employees"),
+        fetchJson<Asset[]>("/api/assets"),
+      ]);
 
-        if (isMounted) {
-          setReturnRequests(returnRequestsData);
-          setEmployees(employeesData);
-          setAssets(assetsData);
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        console.error("Failed to load return requests:", err);
-        setError(
-          "Unable to load return requests right now. Please try again later."
-        );
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+      setReturnRequests(returnRequestsData);
+      setEmployees(employeesData);
+      setAssets(assetsData);
+    } catch (err) {
+      console.error("Failed to load return requests:", err);
+      setError(
+        "Unable to load return requests right now. Please try again later."
+      );
+    } finally {
+      setIsLoading(false);
     }
+  }
 
+  useEffect(() => {
     loadData();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  async function handleCompleteReturn(id: string) {
+    setProcessingRequestId(id);
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/return-requests/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        const message =
+          errorBody && typeof errorBody.error === "string"
+            ? errorBody.error
+            : "Failed to complete return request. Please try again.";
+        setActionError(message);
+        return;
+      }
+
+      await loadData();
+    } catch (err) {
+      console.error("Failed to complete return request:", err);
+      setActionError("Unable to complete return request right now. Please try again.");
+    } finally {
+      setProcessingRequestId(null);
+    }
+  }
 
   const employeeMap = new Map(employees.map((employee) => [employee.id, employee]));
   const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
@@ -159,49 +183,82 @@ export default function ReturnRequestsPage() {
             </p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Asset</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Requested At</TableHead>
-                  <TableHead>Processed At</TableHead>
-                  <TableHead>Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {returnRequests.map((request) => {
-                  const asset = assetMap.get(request.assetId);
-                  const employee = employeeMap.get(request.employeeId);
+          <>
+            {actionError && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{actionError}</span>
+              </div>
+            )}
 
-                  return (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium text-foreground">
-                        {asset ? `${asset.name} (${asset.assetTag})` : "Unknown asset"}
-                      </TableCell>
-                      <TableCell>
-                        {employee
-                          ? `${employee.name} (${employee.employeeCode})`
-                          : "Unknown employee"}
-                      </TableCell>
-                      <TableCell>{request.reason}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(request.status)}>
-                          {request.status.replace(/_/g, " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDateTime(request.requestedAt)}</TableCell>
-                      <TableCell>{formatDateTime(request.processedAt)}</TableCell>
-                      <TableCell>{request.notes ?? "—"}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+            <div className="w-full overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Asset</TableHead>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Requested At</TableHead>
+                    <TableHead>Processed At</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {returnRequests.map((request) => {
+                    const asset = assetMap.get(request.assetId);
+                    const employee = employeeMap.get(request.employeeId);
+                    const isProcessing = processingRequestId === request.id;
+
+                    return (
+                      <TableRow key={request.id}>
+                        <TableCell className="font-medium text-foreground">
+                          {asset ? `${asset.name} (${asset.assetTag})` : "Unknown asset"}
+                        </TableCell>
+                        <TableCell>
+                          {employee
+                            ? `${employee.name} (${employee.employeeCode})`
+                            : "Unknown employee"}
+                        </TableCell>
+                        <TableCell>{request.reason}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(request.status)}>
+                            {request.status.replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDateTime(request.requestedAt)}</TableCell>
+                        <TableCell>{formatDateTime(request.processedAt)}</TableCell>
+                        <TableCell>{request.notes ?? "—"}</TableCell>
+                        <TableCell>
+                          {request.status === "PENDING" ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isProcessing}
+                              onClick={() => handleCompleteReturn(request.id)}
+                            >
+                              {isProcessing ? (
+                                <>
+                                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                  Completing...
+                                </>
+                              ) : (
+                                "Complete Return"
+                              )}
+                            </Button>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
     </AppShell>
