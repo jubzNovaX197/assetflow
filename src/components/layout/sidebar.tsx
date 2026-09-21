@@ -1,17 +1,21 @@
 // components/layout/sidebar.tsx
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import {
   LayoutDashboard,
   Package,
   Users,
   ClipboardList,
+  RotateCcw,
   Wrench,
   History,
   Boxes,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export const NAV_ITEMS = [
@@ -19,6 +23,11 @@ export const NAV_ITEMS = [
   { label: "Assets", href: "/assets", icon: Package },
   { label: "Employees", href: "/employees", icon: Users },
   { label: "Assignments", href: "/assignments", icon: ClipboardList },
+  {
+    label: "Return Requests",
+    href: "/return-requests",
+    icon: RotateCcw,
+  },
   { label: "Services", href: "/services", icon: Wrench },
   { label: "Audit Trail", href: "/audit-trail", icon: History },
 ] as const;
@@ -30,6 +39,7 @@ export function Sidebar() {
     <aside className="hidden md:flex md:w-64 md:shrink-0 md:flex-col md:border-r md:bg-sidebar">
       <div className="flex h-16 items-center gap-2 border-b px-6">
         <Boxes className="h-6 w-6 text-sidebar-foreground" />
+
         <span className="text-lg font-semibold tracking-tight text-sidebar-foreground">
           AssetFlow
         </span>
@@ -40,7 +50,8 @@ export function Sidebar() {
           const isActive =
             item.href === "/"
               ? pathname === "/"
-              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
           return (
             <Link

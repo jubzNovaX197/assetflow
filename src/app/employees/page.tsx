@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -118,6 +120,7 @@ export default function EmployeesPage() {
                   <TableHead>Designation</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -138,6 +141,17 @@ export default function EmployeesPage() {
                         {employee.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+  <Link href={`/employees/${employee.id}`}>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+    >
+      View Details
+    </Button>
+  </Link>
+</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

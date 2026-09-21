@@ -15,11 +15,17 @@ const UUID_REGEX =
 
 export async function GET() {
   try {
-    const returnRequests = await db.orm.public.ReturnRequest.all();
+    const returnRequests =
+      await db.orm.public.ReturnRequest.all();
 
-    return NextResponse.json(returnRequests, { status: 200 });
+    return NextResponse.json(returnRequests, {
+      status: 200,
+    });
   } catch (error) {
-    console.error("Failed to fetch return requests:", error);
+    console.error(
+      "Failed to fetch return requests:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -37,7 +43,10 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch (error) {
-    console.error("Failed to parse request JSON:", error);
+    console.error(
+      "Failed to parse request JSON:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -96,7 +105,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "assetId is required and must be a valid UUID",
+        message:
+          "assetId is required and must be a valid UUID",
       },
       { status: 400 }
     );
@@ -109,7 +119,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "employeeId is required and must be a valid UUID",
+        message:
+          "employeeId is required and must be a valid UUID",
       },
       { status: 400 }
     );
@@ -122,7 +133,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "reason is required and must be a non-empty string",
+        message:
+          "reason is required and must be a non-empty string",
       },
       { status: 400 }
     );
@@ -136,13 +148,17 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "processedAt must be a valid date string if provided",
+        message:
+          "processedAt must be a valid date string if provided",
       },
       { status: 400 }
     );
   }
 
-  if (notes !== undefined && typeof notes !== "string") {
+  if (
+    notes !== undefined &&
+    typeof notes !== "string"
+  ) {
     return NextResponse.json(
       {
         status: "error",
@@ -158,14 +174,19 @@ export async function POST(request: Request) {
     reason,
     status: "PENDING" as const,
     requestedAt: new Date().toISOString(),
-    ...(processedAt !== undefined && { processedAt }),
+    ...(processedAt !== undefined && {
+      processedAt,
+    }),
     ...(notes !== undefined && { notes }),
   };
 
   try {
-    const assets = await db.orm.public.Asset.all();
+    const assets =
+      await db.orm.public.Asset.all();
 
-    const asset = assets.find((a) => a.id === assetId);
+    const asset = assets.find(
+      (a) => a.id === assetId
+    );
 
     if (!asset) {
       return NextResponse.json(
@@ -177,9 +198,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const employees = await db.orm.public.Employee.all();
+    const employees =
+      await db.orm.public.Employee.all();
 
-    const employee = employees.find((e) => e.id === employeeId);
+    const employee = employees.find(
+      (e) => e.id === employeeId
+    );
 
     if (!employee) {
       return NextResponse.json(
@@ -201,35 +225,62 @@ export async function POST(request: Request) {
       );
     }
 
-    const assignments = await db.orm.public.Assignment.all();
+    const assignments =
+      await db.orm.public.Assignment.all();
 
-    const activeAssignment = assignments.find(
-      (a) =>
-        a.assetId === assetId &&
-        a.employeeId === employeeId &&
-        a.returnedAt === null
-    );
+    const activeAssignment =
+      assignments.find(
+        (a) =>
+          a.assetId === assetId &&
+          a.employeeId === employeeId &&
+          a.returnedAt === null
+      );
 
     if (!activeAssignment) {
       return NextResponse.json(
         {
           status: "error",
-          message: "Employee is not currently assigned this asset",
+          message:
+            "Employee is not currently assigned this asset",
         },
         { status: 409 }
       );
     }
 
     const returnRequest =
-      await db.orm.public.ReturnRequest.create(validatedData);
+      await db.orm.public.ReturnRequest.create(
+        validatedData
+      );
 
-    await db.orm.public.Asset.where({ id: assetId }).update({
+    await db.orm.public.Asset.where({
+      id: assetId,
+    }).update({
       status: "RETURN_REQUESTED",
     });
 
-    return NextResponse.json(returnRequest, { status: 201 });
+    await db.orm.public.AuditLog.create({
+      assetId,
+      action: "ASSET_RETURN_REQUESTED",
+      actor: "Admin",
+      oldStatus: "ASSIGNED",
+      newStatus: "RETURN_REQUESTED",
+      metadata: {
+        returnRequestId: returnRequest.id,
+        employeeId,
+        reason,
+      },
+      createdAt: new Date().toISOString(),
+    });
+
+    return NextResponse.json(
+      returnRequest,
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Failed to create return request:", error);
+    console.error(
+      "Failed to create return request:",
+      error
+    );
 
     return NextResponse.json(
       {

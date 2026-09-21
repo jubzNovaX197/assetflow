@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { AlertCircle, Loader2, X } from "lucide-react";
+import { AlertCircle, Loader2, Plus, X } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -37,9 +37,23 @@ interface Assignment {
   assignedAt: string;
   returnedAt: string | null;
   assignedCondition: "EXCELLENT" | "GOOD" | "FAIR" | "DAMAGED";
-  returnedCondition: "EXCELLENT" | "GOOD" | "FAIR" | "DAMAGED" | null;
+  returnedCondition:
+    | "EXCELLENT"
+    | "GOOD"
+    | "FAIR"
+    | "DAMAGED"
+    | null;
   notes: string | null;
 }
+
+const CONDITIONS = [
+  "EXCELLENT",
+  "GOOD",
+  "FAIR",
+  "DAMAGED",
+] as const;
+
+type AssetCondition = (typeof CONDITIONS)[number];
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -69,23 +83,44 @@ export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedAssetId, setSelectedAssetId] = useState("");
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [assignedAt, setAssignedAt] = useState("");
+  const [assignedCondition, setAssignedCondition] =
+    useState<AssetCondition>("GOOD");
+  const [assignmentNotes, setAssignmentNotes] = useState("");
+
+  const [assignFormError, setAssignFormError] =
+    useState<string | null>(null);
+  const [isAssignSubmitting, setIsAssignSubmitting] =
+    useState(false);
+
+  const [isReturnDialogOpen, setIsReturnDialogOpen] =
+    useState(false);
   const [returningAssignment, setReturningAssignment] =
     useState<Assignment | null>(null);
   const [returnReason, setReturnReason] = useState("");
   const [returnNotes, setReturnNotes] = useState("");
-  const [returnFormError, setReturnFormError] = useState<string | null>(null);
-  const [isReturnSubmitting, setIsReturnSubmitting] = useState(false);
+  const [returnFormError, setReturnFormError] =
+    useState<string | null>(null);
+  const [isReturnSubmitting, setIsReturnSubmitting] =
+    useState(false);
 
   async function loadData() {
     setIsLoading(true);
     setError(null);
 
     try {
-      const [assignmentsData, employeesData, assetsData] = await Promise.all([
+      const [
+        assignmentsData,
+        employeesData,
+        assetsData,
+      ] = await Promise.all([
         fetchJson<Assignment[]>("/api/assignments"),
         fetchJson<Employee[]>("/api/employees"),
         fetchJson<Asset[]>("/api/assets"),
@@ -96,6 +131,7 @@ export default function AssignmentsPage() {
       setAssets(assetsData);
     } catch (err) {
       console.error("Failed to load assignments:", err);
+
       setError(
         "Unable to load assignments right now. Please try again later."
       );
@@ -112,7 +148,112 @@ export default function AssignmentsPage() {
     employees.map((employee) => [employee.id, employee])
   );
 
-  const assetMap = new Map(assets.map((asset) => [asset.id, asset]));
+  const assetMap = new Map(
+    assets.map((asset) => [asset.id, asset])
+  );
+
+  const availableAssets = assets.filter(
+    (asset) => asset.status === "AVAILABLE"
+  );
+
+  function openAssignDialog() {
+    setSelectedAssetId("");
+    setSelectedEmployeeId("");
+    setAssignedAt("");
+    setAssignedCondition("GOOD");
+    setAssignmentNotes("");
+    setAssignFormError(null);
+    setIsAssignDialogOpen(true);
+  }
+
+  function closeAssignDialog() {
+    if (isAssignSubmitting) {
+      return;
+    }
+
+    setIsAssignDialogOpen(false);
+    setSelectedAssetId("");
+    setSelectedEmployeeId("");
+    setAssignedAt("");
+    setAssignedCondition("GOOD");
+    setAssignmentNotes("");
+    setAssignFormError(null);
+  }
+
+  async function handleAssignSubmit() {
+    if (!selectedAssetId) {
+      setAssignFormError("Please select an asset.");
+      return;
+    }
+
+    if (!selectedEmployeeId) {
+      setAssignFormError("Please select an employee.");
+      return;
+    }
+
+    if (!assignedAt) {
+      setAssignFormError("Please select the assignment date and time.");
+      return;
+    }
+
+    setAssignFormError(null);
+    setIsAssignSubmitting(true);
+
+    try {
+      const payload: Record<string, unknown> = {
+        assetId: selectedAssetId,
+        employeeId: selectedEmployeeId,
+        assignedAt: new Date(assignedAt).toISOString(),
+        assignedCondition,
+      };
+
+      const trimmedNotes = assignmentNotes.trim();
+
+      if (trimmedNotes) {
+        payload.notes = trimmedNotes;
+      }
+
+      const response = await fetch("/api/assignments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          responseData &&
+          typeof responseData === "object" &&
+          "message" in responseData &&
+          typeof responseData.message === "string"
+            ? responseData.message
+            : responseData &&
+                typeof responseData === "object" &&
+                "error" in responseData &&
+                typeof responseData.error === "string"
+              ? responseData.error
+              : "Unable to assign the asset.";
+
+        throw new Error(message);
+      }
+
+      closeAssignDialog();
+      await loadData();
+    } catch (err) {
+      console.error("Failed to assign asset:", err);
+
+      setAssignFormError(
+        err instanceof Error
+          ? err.message
+          : "Unable to assign the asset."
+      );
+    } finally {
+      setIsAssignSubmitting(false);
+    }
+  }
 
   function openReturnDialog(assignment: Assignment) {
     setReturningAssignment(assignment);
@@ -178,20 +319,23 @@ export default function AssignmentsPage() {
           "message" in responseData &&
           typeof responseData.message === "string"
             ? responseData.message
-            : "Unable to submit the return request.";
+            : responseData &&
+                typeof responseData === "object" &&
+                "error" in responseData &&
+                typeof responseData.error === "string"
+              ? responseData.error
+              : "Unable to submit the return request.";
 
         throw new Error(message);
       }
 
-      setIsReturnDialogOpen(false);
-      setReturningAssignment(null);
-      setReturnReason("");
-      setReturnNotes("");
-      setReturnFormError(null);
-
+      closeReturnDialog();
       await loadData();
     } catch (err) {
-      console.error("Failed to submit return request:", err);
+      console.error(
+        "Failed to submit the return request:",
+        err
+      );
 
       setReturnFormError(
         err instanceof Error
@@ -206,26 +350,57 @@ export default function AssignmentsPage() {
   return (
     <AppShell title="Assignments">
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Assignments
-          </h1>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              Assignments
+            </h1>
 
-          <p className="text-sm text-muted-foreground">
-            Track custody history of assets assigned to employees.
-          </p>
+            <p className="text-sm text-muted-foreground">
+              Track custody history of assets assigned to employees.
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            onClick={openAssignDialog}
+            disabled={availableAssets.length === 0}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Assign Asset
+          </Button>
         </div>
+
+        {availableAssets.length === 0 &&
+          !isLoading &&
+          !error && (
+            <div className="rounded-md border bg-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">
+                No available assets
+              </p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                An asset must have AVAILABLE status before it can
+                be assigned.
+              </p>
+            </div>
+          )}
 
         {isLoading ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <p className="text-sm">Loading assignments...</p>
+
+            <p className="text-sm">
+              Loading assignments...
+            </p>
           </div>
         ) : error ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-destructive" />
 
-            <p className="text-sm font-medium text-foreground">{error}</p>
+            <p className="text-sm font-medium text-foreground">
+              {error}
+            </p>
           </div>
         ) : assignments.length === 0 ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
@@ -234,8 +409,8 @@ export default function AssignmentsPage() {
             </p>
 
             <p className="text-sm text-muted-foreground">
-              Assignments will appear here once assets are assigned to
-              employees.
+              Assignments will appear here once assets are assigned
+              to employees.
             </p>
           </div>
         ) : (
@@ -257,13 +432,20 @@ export default function AssignmentsPage() {
 
               <TableBody>
                 {assignments.map((assignment) => {
-                  const asset = assetMap.get(assignment.assetId);
-                  const employee = employeeMap.get(assignment.employeeId);
+                  const asset = assetMap.get(
+                    assignment.assetId
+                  );
 
-                  const isActive = assignment.returnedAt === null;
+                  const employee = employeeMap.get(
+                    assignment.employeeId
+                  );
+
+                  const isActive =
+                    assignment.returnedAt === null;
 
                   const canRequestReturn =
-                    isActive && asset?.status === "ASSIGNED";
+                    isActive &&
+                    asset?.status === "ASSIGNED";
 
                   return (
                     <TableRow key={assignment.id}>
@@ -280,28 +462,43 @@ export default function AssignmentsPage() {
                       </TableCell>
 
                       <TableCell>
-                        {formatDateTime(assignment.assignedAt)}
+                        {formatDateTime(
+                          assignment.assignedAt
+                        )}
                       </TableCell>
 
-                      <TableCell>{assignment.assignedCondition}</TableCell>
+                      <TableCell>
+                        {assignment.assignedCondition}
+                      </TableCell>
 
                       <TableCell>
                         {assignment.returnedAt
-                          ? formatDateTime(assignment.returnedAt)
+                          ? formatDateTime(
+                              assignment.returnedAt
+                            )
                           : "Active"}
                       </TableCell>
 
                       <TableCell>
-                        {assignment.returnedCondition ?? "—"}
+                        {assignment.returnedCondition ??
+                          "—"}
                       </TableCell>
 
-                      <TableCell>{assignment.notes ?? "—"}</TableCell>
+                      <TableCell>
+                        {assignment.notes ?? "—"}
+                      </TableCell>
 
                       <TableCell>
                         <Badge
-                          variant={isActive ? "default" : "secondary"}
+                          variant={
+                            isActive
+                              ? "default"
+                              : "secondary"
+                          }
                         >
-                          {isActive ? "Active" : "Returned"}
+                          {isActive
+                            ? "Active"
+                            : "Returned"}
                         </Badge>
                       </TableCell>
 
@@ -311,7 +508,11 @@ export default function AssignmentsPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => openReturnDialog(assignment)}
+                            onClick={() =>
+                              openReturnDialog(
+                                assignment
+                              )
+                            }
                           >
                             Request Return
                           </Button>
@@ -327,6 +528,223 @@ export default function AssignmentsPage() {
           </div>
         )}
       </div>
+
+      {isAssignDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="assign-dialog-title"
+        >
+          <div className="w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2
+                  id="assign-dialog-title"
+                  className="text-lg font-semibold text-foreground"
+                >
+                  Assign Asset
+                </h2>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Assign an available asset to an employee.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={closeAssignDialog}
+                disabled={isAssignSubmitting}
+                aria-label="Close dialog"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="assignment-asset"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Asset <span className="text-destructive">*</span>
+                </label>
+
+                <select
+                  id="assignment-asset"
+                  value={selectedAssetId}
+                  onChange={(event) =>
+                    setSelectedAssetId(event.target.value)
+                  }
+                  disabled={isAssignSubmitting}
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">
+                    Select an available asset
+                  </option>
+
+                  {availableAssets.map((asset) => (
+                    <option
+                      key={asset.id}
+                      value={asset.id}
+                    >
+                      {asset.name} ({asset.assetTag})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="assignment-employee"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Employee{" "}
+                  <span className="text-destructive">*</span>
+                </label>
+
+                <select
+                  id="assignment-employee"
+                  value={selectedEmployeeId}
+                  onChange={(event) =>
+                    setSelectedEmployeeId(
+                      event.target.value
+                    )
+                  }
+                  disabled={isAssignSubmitting}
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">
+                    Select an employee
+                  </option>
+
+                  {employees.map((employee) => (
+                    <option
+                      key={employee.id}
+                      value={employee.id}
+                    >
+                      {employee.name} (
+                      {employee.employeeCode})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="assigned-at"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Assignment Date & Time{" "}
+                  <span className="text-destructive">*</span>
+                </label>
+
+                <input
+                  id="assigned-at"
+                  type="datetime-local"
+                  value={assignedAt}
+                  onChange={(event) =>
+                    setAssignedAt(event.target.value)
+                  }
+                  disabled={isAssignSubmitting}
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="assigned-condition"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Condition at Assignment{" "}
+                  <span className="text-destructive">*</span>
+                </label>
+
+                <select
+                  id="assigned-condition"
+                  value={assignedCondition}
+                  onChange={(event) =>
+                    setAssignedCondition(
+                      event.target.value as AssetCondition
+                    )
+                  }
+                  disabled={isAssignSubmitting}
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {CONDITIONS.map((condition) => (
+                    <option
+                      key={condition}
+                      value={condition}
+                    >
+                      {condition}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="assignment-notes"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Notes
+                </label>
+
+                <textarea
+                  id="assignment-notes"
+                  value={assignmentNotes}
+                  onChange={(event) =>
+                    setAssignmentNotes(
+                      event.target.value
+                    )
+                  }
+                  disabled={isAssignSubmitting}
+                  placeholder="Add any assignment notes"
+                  rows={3}
+                  className="flex min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              {assignFormError && (
+                <div
+                  className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                  role="alert"
+                >
+                  {assignFormError}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeAssignDialog}
+                disabled={isAssignSubmitting}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleAssignSubmit}
+                disabled={isAssignSubmitting}
+              >
+                {isAssignSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Assigning...
+                  </>
+                ) : (
+                  "Assign Asset"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isReturnDialogOpen && returningAssignment && (
         <div
@@ -369,7 +787,9 @@ export default function AssignmentsPage() {
                     <span className="font-medium text-foreground">
                       Asset:
                     </span>{" "}
-                    {assetMap.get(returningAssignment.assetId)
+                    {assetMap.get(
+                      returningAssignment.assetId
+                    )
                       ? `${assetMap.get(returningAssignment.assetId)?.name} (${assetMap.get(returningAssignment.assetId)?.assetTag})`
                       : "Unknown asset"}
                   </div>
@@ -378,7 +798,9 @@ export default function AssignmentsPage() {
                     <span className="font-medium text-foreground">
                       Employee:
                     </span>{" "}
-                    {employeeMap.get(returningAssignment.employeeId)
+                    {employeeMap.get(
+                      returningAssignment.employeeId
+                    )
                       ? `${employeeMap.get(returningAssignment.employeeId)?.name} (${employeeMap.get(returningAssignment.employeeId)?.employeeCode})`
                       : "Unknown employee"}
                   </div>
@@ -390,14 +812,17 @@ export default function AssignmentsPage() {
                   htmlFor="return-reason"
                   className="text-sm font-medium text-foreground"
                 >
-                  Reason <span className="text-destructive">*</span>
+                  Reason{" "}
+                  <span className="text-destructive">*</span>
                 </label>
 
                 <input
                   id="return-reason"
                   type="text"
                   value={returnReason}
-                  onChange={(event) => setReturnReason(event.target.value)}
+                  onChange={(event) =>
+                    setReturnReason(event.target.value)
+                  }
                   disabled={isReturnSubmitting}
                   placeholder="Enter reason for returning the asset"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
@@ -415,7 +840,9 @@ export default function AssignmentsPage() {
                 <textarea
                   id="return-notes"
                   value={returnNotes}
-                  onChange={(event) => setReturnNotes(event.target.value)}
+                  onChange={(event) =>
+                    setReturnNotes(event.target.value)
+                  }
                   disabled={isReturnSubmitting}
                   placeholder="Add any additional notes"
                   rows={4}

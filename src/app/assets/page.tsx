@@ -1,5 +1,5 @@
 "use client";
-
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AlertCircle, Loader2, Plus, X, Pencil, UserPlus } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
@@ -377,6 +377,11 @@ export default function AssetsPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isEmployeesLoading, setIsEmployeesLoading] = useState(false);
   const [employeesError, setEmployeesError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+const [statusFilter, setStatusFilter] = useState("ALL");
+const [categoryFilter, setCategoryFilter] = useState("ALL");
+const [conditionFilter, setConditionFilter] = useState("ALL");
+const [typeFilter, setTypeFilter] = useState("ALL");
 
   useEffect(() => {
     let isMounted = true;
@@ -408,6 +413,37 @@ export default function AssetsPage() {
       isMounted = false;
     };
   }, []);
+  const filteredAssets = assets.filter((asset) => {
+  const search = searchTerm.trim().toLowerCase();
+
+  const matchesSearch =
+    search.length === 0 ||
+    asset.assetTag.toLowerCase().includes(search) ||
+    asset.name.toLowerCase().includes(search) ||
+    (asset.serialNumber?.toLowerCase().includes(search) ?? false) ||
+    (asset.manufacturer?.toLowerCase().includes(search) ?? false) ||
+    (asset.model?.toLowerCase().includes(search) ?? false);
+
+  const matchesStatus =
+    statusFilter === "ALL" || asset.status === statusFilter;
+
+  const matchesCategory =
+    categoryFilter === "ALL" || asset.category === categoryFilter;
+
+  const matchesCondition =
+    conditionFilter === "ALL" || asset.condition === conditionFilter;
+
+  const matchesType =
+    typeFilter === "ALL" || asset.assetType === typeFilter;
+
+  return (
+    matchesSearch &&
+    matchesStatus &&
+    matchesCategory &&
+    matchesCondition &&
+    matchesType
+  );
+});
 
   function updateField<K extends keyof AssetFormState>(field: K, value: string) {
     setFormState((prev) => ({ ...prev, [field]: value }));
@@ -693,7 +729,123 @@ export default function AssetsPage() {
             </p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto rounded-md border">
+  <>
+    <div className="rounded-md border bg-card p-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="flex flex-col gap-2 lg:col-span-1">
+          <label
+            htmlFor="asset-search"
+            className="text-sm font-medium text-foreground"
+          >
+            Search
+          </label>
+
+          <input
+            id="asset-search"
+            type="text"
+            placeholder="Search assets..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="status-filter"
+            className="text-sm font-medium text-foreground"
+          >
+            Status
+          </label>
+
+          <select
+            id="status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="ALL">All Statuses</option>
+            {ASSET_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="category-filter"
+            className="text-sm font-medium text-foreground"
+          >
+            Category
+          </label>
+
+          <select
+            id="category-filter"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="ALL">All Categories</option>
+            {ASSET_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="condition-filter"
+            className="text-sm font-medium text-foreground"
+          >
+            Condition
+          </label>
+
+          <select
+            id="condition-filter"
+            value={conditionFilter}
+            onChange={(e) => setConditionFilter(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="ALL">All Conditions</option>
+            {ASSET_CONDITIONS.map((condition) => (
+              <option key={condition} value={condition}>
+                {condition}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="type-filter"
+            className="text-sm font-medium text-foreground"
+          >
+            Type
+          </label>
+
+          <select
+            id="type-filter"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="ALL">All Types</option>
+            {ASSET_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div className="w-full overflow-x-auto rounded-md border">
+          
             <Table>
               <TableHeader>
                 <TableRow>
@@ -710,7 +862,24 @@ export default function AssetsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map((asset) => (
+                {filteredAssets.length === 0 ? (
+                  <TableRow>
+  <TableCell
+    colSpan={10}
+    className="h-32 text-center"
+  >
+    <div className="flex flex-col items-center justify-center gap-1">
+      <p className="text-sm font-medium text-foreground">
+        No matching assets found
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Try adjusting your search or filters.
+      </p>
+    </div>
+  </TableCell>
+</TableRow>
+) : (
+    filteredAssets.map((asset) => (
                   <TableRow key={asset.id}>
                     <TableCell className="font-medium text-foreground">
                       {asset.assetTag}
@@ -729,6 +898,15 @@ export default function AssetsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
+                        <Link href={`/assets/${asset.id}`}>
+  <Button
+    type="button"
+    variant="outline"
+    size="sm"
+  >
+    View Details
+  </Button>
+</Link>
                         <Button
                           type="button"
                           variant="outline"
@@ -752,10 +930,12 @@ export default function AssetsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
+                        ))
+        )}
+        </TableBody>
             </Table>
-          </div>
+                    </div>
+        </>
         )}
       </div>
 
