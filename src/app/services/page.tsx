@@ -317,15 +317,15 @@ export default function ServicesPage() {
 
   return (
     <AppShell title="Services">
-      <div className="flex flex-col gap-6">
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6 bg-[#080b12] -m-4 p-4 md:-m-6 md:p-6 lg:-m-8 lg:p-8">
         {/* Page Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
               Services
             </h1>
 
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-slate-400">
               Track maintenance, repairs, service costs, and asset recovery.
             </p>
           </div>
@@ -343,32 +343,32 @@ export default function ServicesPage() {
 
         {/* Summary Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl border bg-card p-4">
-            <p className="text-sm text-muted-foreground">Total Services</p>
+          <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+            <p className="text-sm text-slate-400">Total Services</p>
             <p className="mt-2 text-2xl font-semibold">{summary.total}</p>
           </div>
 
-          <div className="rounded-xl border bg-card p-4">
-            <p className="text-sm text-muted-foreground">Open</p>
+          <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+            <p className="text-sm text-slate-400">Open</p>
             <p className="mt-2 text-2xl font-semibold">{summary.open}</p>
           </div>
 
-          <div className="rounded-xl border bg-card p-4">
-            <p className="text-sm text-muted-foreground">In Progress</p>
+          <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+            <p className="text-sm text-slate-400">In Progress</p>
             <p className="mt-2 text-2xl font-semibold">
               {summary.inProgress}
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card p-4">
-            <p className="text-sm text-muted-foreground">Completed</p>
+          <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+            <p className="text-sm text-slate-400">Completed</p>
             <p className="mt-2 text-2xl font-semibold">
               {summary.completed}
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card p-4">
-            <p className="text-sm text-muted-foreground">Service Cost</p>
+          <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+            <p className="text-sm text-slate-400">Service Cost</p>
             <p className="mt-2 text-2xl font-semibold">
               {formatCost(String(summary.totalCost))}
             </p>
@@ -377,7 +377,7 @@ export default function ServicesPage() {
 
         {/* Create Service Form */}
         {showCreateForm && (
-          <div className="rounded-xl border bg-card p-5">
+          <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
             <div className="mb-5 flex items-center gap-3">
               <div className="rounded-lg bg-muted p-2">
                 <Wrench className="h-5 w-5" />
@@ -385,7 +385,7 @@ export default function ServicesPage() {
 
               <div>
                 <h2 className="font-semibold">Create Service Record</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-400">
                   Record a maintenance or repair event for an asset.
                 </p>
               </div>
@@ -586,34 +586,34 @@ export default function ServicesPage() {
             </p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto rounded-xl border">
+          <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Asset</TableHead>
-                  <TableHead>Issue</TableHead>
-                  <TableHead>Vendor</TableHead>
-                  <TableHead>Cost</TableHead>
-                  <TableHead>Opened</TableHead>
-                  <TableHead>Status</TableHead>
+              <TableHeader className="bg-slate-900/70">
+                <TableRow className="border-slate-800 hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Issue</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Vendor</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Cost</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Opened</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
-              <TableBody>
+              <TableBody className="divide-y divide-slate-800/70">
                 {filteredRecords.map((record) => {
                   const asset = assetMap.get(record.assetId);
                   const isActionRunning = actionId === record.id;
 
                   return (
-                    <TableRow key={record.id}>
+                    <TableRow key={record.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
                       <TableCell>
                         <div>
-                          <p className="font-medium text-foreground">
+                          <p className="font-semibold text-white">
                             {asset?.name ?? "Unknown asset"}
                           </p>
 
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-slate-500">
                             {asset?.assetTag ?? "Unknown"}
                           </p>
                         </div>
@@ -632,7 +632,7 @@ export default function ServicesPage() {
                       </TableCell>
 
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(record.status)}>
+                        <Badge className={record.status === "OPEN" ? "border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/10" : record.status === "IN_PROGRESS" ? "border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/10" : record.status === "COMPLETED" ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/10" : "border border-slate-700 bg-slate-800/70 text-slate-400 hover:bg-slate-800/70"}>
                           {formatStatus(record.status)}
                         </Badge>
                       </TableCell>
@@ -707,7 +707,7 @@ export default function ServicesPage() {
 
         {/* Results Count */}
         {!isLoading && !error && serviceRecords.length > 0 && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-500">
             Showing {filteredRecords.length} of {serviceRecords.length} service
             records
           </p>
@@ -723,7 +723,7 @@ export default function ServicesPage() {
                     Service Details
                   </h2>
 
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-slate-400">
                     {assetMap.get(selectedRecord.assetId)?.assetTag ??
                       "Unknown asset"}
                   </p>
@@ -740,7 +740,7 @@ export default function ServicesPage() {
 
               <div className="grid gap-5 p-5 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs text-muted-foreground">Asset</p>
+                  <p className="text-xs text-slate-500">Asset</p>
                   <p className="mt-1 font-medium">
                     {assetMap.get(selectedRecord.assetId)?.name ??
                       "Unknown asset"}
@@ -748,7 +748,7 @@ export default function ServicesPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-xs text-slate-500">Status</p>
                   <div className="mt-1">
                     <Badge
                       variant={getStatusBadgeVariant(selectedRecord.status)}
@@ -759,47 +759,47 @@ export default function ServicesPage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">Issue</p>
+                  <p className="text-xs text-slate-500">Issue</p>
                   <p className="mt-1 text-sm">{selectedRecord.issue}</p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Vendor</p>
+                  <p className="text-xs text-slate-500">Vendor</p>
                   <p className="mt-1 text-sm">
                     {selectedRecord.vendor ?? "—"}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Cost</p>
+                  <p className="text-xs text-slate-500">Cost</p>
                   <p className="mt-1 text-sm">
                     {formatCost(selectedRecord.cost)}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Opened At</p>
+                  <p className="text-xs text-slate-500">Opened At</p>
                   <p className="mt-1 text-sm">
                     {formatDateTime(selectedRecord.openedAt)}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Resolved At</p>
+                  <p className="text-xs text-slate-500">Resolved At</p>
                   <p className="mt-1 text-sm">
                     {formatDateTime(selectedRecord.resolvedAt)}
                   </p>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">Resolution</p>
+                  <p className="text-xs text-slate-500">Resolution</p>
                   <p className="mt-1 text-sm">
                     {selectedRecord.resolution ?? "—"}
                   </p>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-xs text-slate-500">Notes</p>
                   <p className="mt-1 whitespace-pre-wrap text-sm">
                     {selectedRecord.notes ?? "—"}
                   </p>

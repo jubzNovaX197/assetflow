@@ -253,20 +253,20 @@ export default function ReturnRequestsPage() {
 
   return (
     <AppShell title="Return Requests">
-      <div className="flex flex-col gap-6">
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6 bg-[#080b12] -m-4 p-4 md:-m-6 md:p-6 lg:-m-8 lg:p-8">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
             Return Requests
           </h1>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-400">
             Review requests submitted by employees
             to return assigned assets.
           </p>
         </div>
 
         {isLoading ? (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted-foreground">
+          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-500">
             <Loader2 className="h-6 w-6 animate-spin" />
 
             <p className="text-sm">
@@ -287,7 +287,7 @@ export default function ReturnRequestsPage() {
               No return requests found
             </p>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               Return requests will appear here once
               employees request to return assets.
             </p>
@@ -302,25 +302,25 @@ export default function ReturnRequestsPage() {
               </div>
             )}
 
-            <div className="w-full overflow-x-auto rounded-md border">
+            <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Requested At</TableHead>
-                    <TableHead>Processed At</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead>
+                <TableHeader className="bg-slate-900/70">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Employee</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Reason</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Requested At</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Processed At</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Notes</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">
                       Returned Condition
                     </TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
 
-                <TableBody>
+                <TableBody className="divide-y divide-slate-800/70">
                   {returnRequests.map((request) => {
                     const asset =
                       assetMap.get(request.assetId);
@@ -335,25 +335,25 @@ export default function ReturnRequestsPage() {
                       request.id;
 
                     return (
-                      <TableRow key={request.id}>
-                        <TableCell className="font-medium text-foreground">
+                      <TableRow key={request.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                        <TableCell className="font-semibold text-white">
                           {asset
                             ? `${asset.name} (${asset.assetTag})`
                             : "Unknown asset"}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-sm text-slate-400">
                           {employee
                             ? `${employee.name} (${employee.employeeCode})`
                             : "Unknown employee"}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-sm text-slate-400">
                           {request.reason}
                         </TableCell>
 
-                        <TableCell>
-                          <Badge
+                        <TableCell className="text-sm text-slate-400">
+                          <Badge className={request.status === "PENDING" ? "border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/10" : request.status === "APPROVED" ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/10" : request.status === "REJECTED" ? "border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/10" : "border border-slate-700 bg-slate-800/70 text-slate-400 hover:bg-slate-800/70"}
                             variant={getStatusBadgeVariant(
                               request.status
                             )}
@@ -365,23 +365,23 @@ export default function ReturnRequestsPage() {
                           </Badge>
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-sm text-slate-400">
                           {formatDateTime(
                             request.requestedAt
                           )}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-sm text-slate-400">
                           {formatDateTime(
                             request.processedAt
                           )}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-sm text-slate-400">
                           {request.notes ?? "—"}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-sm text-slate-400">
                           {request.status ===
                           "PENDING" ? (
                             <select
@@ -401,7 +401,7 @@ export default function ReturnRequestsPage() {
                                 )
                               }
                               disabled={isProcessing}
-                              className="h-9 w-[130px] rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring"
+                              className="h-9 w-[130px] rounded-md border border-slate-700 bg-[#080b12] px-3 text-sm text-slate-200 shadow-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                             >
                               {ASSET_CONDITIONS.map(
                                 (condition) => (
@@ -419,7 +419,7 @@ export default function ReturnRequestsPage() {
                           )}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="text-sm text-slate-400">
                           {request.status ===
                           "PENDING" ? (
                             <Button

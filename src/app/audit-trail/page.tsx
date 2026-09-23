@@ -277,20 +277,20 @@ export default function AuditTrailPage() {
 
   return (
     <AppShell title="Audit Trail">
-      <div className="flex flex-col gap-6">
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6 bg-[#080b12] -m-4 p-4 md:-m-6 md:p-6 lg:-m-8 lg:p-8">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
             Audit Trail
           </h1>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-400">
             Review the immutable history of important actions taken
             on assets.
           </p>
         </div>
 
         {isLoading ? (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-muted-foreground">
+          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-slate-500">
             <Loader2 className="h-6 w-6 animate-spin" />
 
             <p className="text-sm">
@@ -311,14 +311,14 @@ export default function AuditTrailPage() {
               No audit logs found
             </p>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               Audit log entries will appear here as actions are
               taken on assets.
             </p>
           </div>
         ) : (
           <>
-            <div className="rounded-lg border bg-card p-4">
+            <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <label
@@ -424,7 +424,7 @@ export default function AuditTrailPage() {
               </div>
 
               <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-400">
                   Showing{" "}
                   <span className="font-medium text-foreground">
                     {filteredLogs.length}
@@ -456,7 +456,7 @@ export default function AuditTrailPage() {
                   No matching audit records
                 </p>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-400">
                   Try adjusting your search or filters.
                 </p>
 
@@ -471,46 +471,46 @@ export default function AuditTrailPage() {
                 </Button>
               </div>
             ) : (
-              <div className="w-full overflow-x-auto rounded-md border">
+              <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Asset</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Old Status</TableHead>
-                      <TableHead>New Status</TableHead>
-                      <TableHead>Metadata</TableHead>
-                      <TableHead>Created At</TableHead>
+                  <TableHeader className="bg-slate-900/70">
+                    <TableRow className="border-slate-800 hover:bg-transparent">
+                      <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Action</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Actor</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Old Status</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">New Status</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Metadata</TableHead>
+                      <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Created At</TableHead>
                     </TableRow>
                   </TableHeader>
 
-                  <TableBody>
+                  <TableBody className="divide-y divide-slate-800/70">
                     {filteredLogs.map((log) => {
                       const asset = log.assetId
                         ? assetMap.get(log.assetId)
                         : undefined;
 
                       return (
-                        <TableRow key={log.id}>
-                          <TableCell>
+                        <TableRow key={log.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                          <TableCell className="text-sm text-slate-400">
                             <Badge variant="outline">
                               {formatAction(log.action)}
                             </Badge>
                           </TableCell>
 
-                          <TableCell className="font-medium text-foreground">
+                          <TableCell className="font-semibold text-white">
                             {log.assetId ? (
                               asset ? (
                                 <div className="flex flex-col">
                                   <Link
                                     href={`/assets/${asset.id}`}
-                                    className="text-primary hover:underline"
+                                    className="text-violet-400 transition-colors hover:text-violet-300 hover:underline"
                                   >
                                     {asset.assetTag}
                                   </Link>
 
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-slate-500">
                                     {asset.name}
                                   </span>
                                 </div>
@@ -522,11 +522,11 @@ export default function AuditTrailPage() {
                             )}
                           </TableCell>
 
-                          <TableCell>
+                          <TableCell className="text-sm text-slate-400">
                             {log.actor}
                           </TableCell>
 
-                          <TableCell>
+                          <TableCell className="text-sm text-slate-400">
                             {log.oldStatus ? (
                               <Badge
                                 variant="outline"
@@ -543,7 +543,7 @@ export default function AuditTrailPage() {
                             )}
                           </TableCell>
 
-                          <TableCell>
+                          <TableCell className="text-sm text-slate-400">
                             {log.newStatus ? (
                               <Badge
                                 variant="outline"
@@ -560,11 +560,11 @@ export default function AuditTrailPage() {
                             )}
                           </TableCell>
 
-                          <TableCell className="max-w-[240px] truncate">
+                          <TableCell className="max-w-[240px] truncate text-sm text-slate-500">
                             {formatMetadata(log.metadata)}
                           </TableCell>
 
-                          <TableCell className="whitespace-nowrap">
+                          <TableCell className="whitespace-nowrap text-sm text-slate-500">
                             {formatDateTime(log.createdAt)}
                           </TableCell>
                         </TableRow>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const UUID_REGEX =
@@ -25,17 +26,69 @@ function isAssetCondition(
   );
 }
 
+function adminErrorResponse(error: unknown) {
+  if (
+    error instanceof Error &&
+    error.message === "UNAUTHORIZED"
+  ) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (
+    error instanceof Error &&
+    error.message === "FORBIDDEN"
+  ) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Administrator access required",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error(
+    "Return request authorization error:",
+    error
+  );
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message:
+        "Unable to verify administrator access",
+    },
+    { status: 500 }
+  );
+}
+
 export async function PATCH(
   request: Request,
   context: {
     params: Promise<{ id: string }>;
   }
 ) {
+  // Only administrators can complete a return.
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   const { id } = await context.params;
 
   if (!id || !UUID_REGEX.test(id)) {
     return NextResponse.json(
-      { error: "Invalid return request ID" },
+      {
+        status: "error",
+        message: "Invalid return request ID",
+      },
       { status: 400 }
     );
   }
@@ -43,9 +96,16 @@ export async function PATCH(
   try {
     const body = await request.json().catch(() => null);
 
-    if (!body || typeof body !== "object") {
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body)
+    ) {
       return NextResponse.json(
-        { error: "Invalid request body" },
+        {
+          status: "error",
+          message: "Invalid request body",
+        },
         { status: 400 }
       );
     }
@@ -58,7 +118,8 @@ export async function PATCH(
     if (!isAssetCondition(returnedCondition)) {
       return NextResponse.json(
         {
-          error:
+          status: "error",
+          message:
             "returnedCondition must be EXCELLENT, GOOD, FAIR, or DAMAGED",
         },
         { status: 400 }
@@ -68,14 +129,16 @@ export async function PATCH(
     const returnRequests =
       await db.orm.public.ReturnRequest.all();
 
-    const returnRequest =
-      returnRequests.find(
-        (request) => request.id === id
-      );
+    const returnRequest = returnRequests.find(
+      (request) => request.id === id
+    );
 
     if (!returnRequest) {
       return NextResponse.json(
-        { error: "Return request not found" },
+        {
+          status: "error",
+          message: "Return request not found",
+        },
         { status: 404 }
       );
     }
@@ -83,7 +146,8 @@ export async function PATCH(
     if (returnRequest.status !== "PENDING") {
       return NextResponse.json(
         {
-          error:
+          status: "error",
+          message:
             "Only a PENDING return request can be completed",
         },
         { status: 400 }
@@ -93,19 +157,21 @@ export async function PATCH(
     const assignments =
       await db.orm.public.Assignment.all();
 
-    const activeAssignment =
-      assignments.find(
-        (assignment) =>
-          assignment.assetId ===
-            returnRequest.assetId &&
-          assignment.employeeId ===
-            returnRequest.employeeId &&
-          assignment.returnedAt === null
-      );
+    const activeAssignment = assignments.find(
+      (assignment) =>
+        assignment.assetId ===
+          returnRequest.assetId &&
+        assignment.employeeId ===
+          returnRequest.employeeId &&
+        assignment.returnedAt === null
+    );
 
     if (!activeAssignment) {
       return NextResponse.json(
-        { error: "Active assignment not found" },
+        {
+          status: "error",
+          message: "Active assignment not found",
+        },
         { status: 400 }
       );
     }
@@ -167,8 +233,8 @@ export async function PATCH(
 
     return NextResponse.json(
       {
-        error:
-          "Failed to process return request",
+        status: "error",
+        message: "Failed to process return request",
       },
       { status: 500 }
     );

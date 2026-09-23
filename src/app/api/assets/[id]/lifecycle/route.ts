@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const UUID_REGEX =
@@ -22,10 +23,48 @@ function isLifecycleAction(
   );
 }
 
+function adminErrorResponse(error: unknown) {
+  if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Administrator access required",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error("Asset lifecycle authorization error:", error);
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message: "Unable to verify administrator access",
+    },
+    { status: 500 }
+  );
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   const { id } = await context.params;
 
   if (!id || !UUID_REGEX.test(id)) {
@@ -169,7 +208,6 @@ export async function POST(
      * AVAILABLE -> IN_REPAIR
      * ASSIGNED -> IN_REPAIR
      */
-
     if (action === "SEND_TO_REPAIR") {
       if (
         asset.status !== "ASSIGNED" &&
@@ -197,12 +235,10 @@ export async function POST(
               : "Asset sent for repair",
           status: "OPEN",
           openedAt: new Date().toISOString(),
-
           ...(typeof vendor === "string" &&
             vendor.trim().length > 0 && {
               vendor: vendor.trim(),
             }),
-
           ...(typeof notes === "string" &&
             notes.trim().length > 0 && {
               notes: notes.trim(),
@@ -245,7 +281,6 @@ export async function POST(
      *
      * IN_REPAIR -> AVAILABLE
      */
-
     if (action === "COMPLETE_REPAIR") {
       if (asset.status !== "IN_REPAIR") {
         return NextResponse.json(
@@ -286,12 +321,10 @@ export async function POST(
         }).update({
           status: "COMPLETED",
           resolvedAt: now,
-
           ...(typeof resolution === "string" &&
             resolution.trim().length > 0 && {
               resolution: resolution.trim(),
             }),
-
           ...(typeof notes === "string" &&
             notes.trim().length > 0 && {
               notes: notes.trim(),
@@ -349,7 +382,6 @@ export async function POST(
      *
      * AVAILABLE -> RETIRED
      */
-
     if (action === "RETIRE") {
       if (asset.status !== "AVAILABLE") {
         return NextResponse.json(

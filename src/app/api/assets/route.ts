@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const ASSET_TYPES = ["HARDWARE", "SOFTWARE"] as const;
@@ -80,7 +82,42 @@ function isValidDateString(value: unknown): value is string {
   return !Number.isNaN(new Date(value).getTime());
 }
 
+function adminErrorResponse(error: unknown) {
+  if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    return NextResponse.json(
+      {
+        error: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return NextResponse.json(
+      {
+        error: "Administrator access required",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error("Asset authorization error:", error);
+
+  return NextResponse.json(
+    {
+      error: "Unable to verify administrator access",
+    },
+    { status: 500 }
+  );
+}
+
 export async function GET() {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   try {
     const assets = await db.orm.public.Asset.all();
 
@@ -97,7 +134,16 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Record<string, unknown>;
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
+  try {
+    const body = (await request.json()) as Record<
+      string,
+      unknown
+    >;
 
     const {
       assetTag,
@@ -117,7 +163,10 @@ export async function POST(request: Request) {
       licenseExpiry,
     } = body;
 
-    if (typeof assetTag !== "string" || assetTag.trim() === "") {
+    if (
+      typeof assetTag !== "string" ||
+      assetTag.trim() === ""
+    ) {
       return NextResponse.json(
         { error: "assetTag is required" },
         { status: 400 }
@@ -186,7 +235,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (description !== undefined && typeof description !== "string") {
+    if (
+      description !== undefined &&
+      typeof description !== "string"
+    ) {
       return NextResponse.json(
         { error: "description must be a string" },
         { status: 400 }
@@ -248,7 +300,7 @@ export async function POST(request: Request) {
     const existingAssets = await db.orm.public.Asset.all();
 
     const duplicateAssetTag = existingAssets.some(
-      (asset) => asset.assetTag === assetTag
+      (asset) => asset.assetTag === assetTag.trim()
     );
 
     if (duplicateAssetTag) {
@@ -259,26 +311,43 @@ export async function POST(request: Request) {
     }
 
     const validatedData = {
-      assetTag,
-      name,
+      assetTag: assetTag.trim(),
+      name: name.trim(),
       assetType,
       category,
       condition,
       status,
-      ...(manufacturer !== undefined && { manufacturer }),
-      ...(model !== undefined && { model }),
-      ...(serialNumber !== undefined && { serialNumber }),
-      ...(description !== undefined && { description }),
-      ...(purchaseDate !== undefined && { purchaseDate }),
+      ...(manufacturer !== undefined && {
+        manufacturer: manufacturer.trim(),
+      }),
+      ...(model !== undefined && {
+        model: model.trim(),
+      }),
+      ...(serialNumber !== undefined && {
+        serialNumber: serialNumber.trim(),
+      }),
+      ...(description !== undefined && {
+        description: description.trim(),
+      }),
+      ...(purchaseDate !== undefined && {
+        purchaseDate,
+      }),
       ...(purchasePrice !== undefined && {
         purchasePrice: purchasePrice.toString(),
       }),
-      ...(warrantyExpiry !== undefined && { warrantyExpiry }),
-      ...(licenseKey !== undefined && { licenseKey }),
-      ...(licenseExpiry !== undefined && { licenseExpiry }),
+      ...(warrantyExpiry !== undefined && {
+        warrantyExpiry,
+      }),
+      ...(licenseKey !== undefined && {
+        licenseKey,
+      }),
+      ...(licenseExpiry !== undefined && {
+        licenseExpiry,
+      }),
     };
 
-    const asset = await db.orm.public.Asset.create(validatedData);
+    const asset =
+      await db.orm.public.Asset.create(validatedData);
 
     return NextResponse.json(asset, { status: 201 });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const ALLOWED_FIELDS = [
@@ -20,9 +21,12 @@ const ASSET_CONDITIONS = [
   "DAMAGED",
 ] as const;
 
-type AssetCondition = (typeof ASSET_CONDITIONS)[number];
+type AssetCondition =
+  (typeof ASSET_CONDITIONS)[number];
 
-function isAssetCondition(value: unknown): value is AssetCondition {
+function isAssetCondition(
+  value: unknown
+): value is AssetCondition {
   return (
     value === "EXCELLENT" ||
     value === "GOOD" ||
@@ -31,19 +35,72 @@ function isAssetCondition(value: unknown): value is AssetCondition {
   );
 }
 
-function isValidDateString(value: unknown): value is string {
+function isValidDateString(
+  value: unknown
+): value is string {
   return (
     typeof value === "string" &&
     !Number.isNaN(Date.parse(value))
   );
 }
 
+function adminErrorResponse(error: unknown) {
+  if (
+    error instanceof Error &&
+    error.message === "UNAUTHORIZED"
+  ) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (
+    error instanceof Error &&
+    error.message === "FORBIDDEN"
+  ) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Administrator access required",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error(
+    "Condition history authorization error:",
+    error
+  );
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message:
+        "Unable to verify administrator access",
+    },
+    { status: 500 }
+  );
+}
+
 export async function GET() {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   try {
     const conditionHistory =
       await db.orm.public.ConditionHistory.all();
 
-    return NextResponse.json(conditionHistory, { status: 200 });
+    return NextResponse.json(
+      conditionHistory,
+      { status: 200 }
+    );
   } catch (error) {
     console.error(
       "Failed to fetch condition history:",
@@ -53,7 +110,8 @@ export async function GET() {
     return NextResponse.json(
       {
         status: "error",
-        message: "Failed to fetch condition history",
+        message:
+          "Failed to fetch condition history",
       },
       { status: 500 }
     );
@@ -61,17 +119,27 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   let body: unknown;
 
   try {
     body = await request.json();
   } catch (error) {
-    console.error("Failed to parse request JSON:", error);
+    console.error(
+      "Failed to parse request JSON:",
+      error
+    );
 
     return NextResponse.json(
       {
         status: "error",
-        message: "Request body must be valid JSON",
+        message:
+          "Request body must be valid JSON",
       },
       { status: 400 }
     );
@@ -85,7 +153,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "Request body must be a JSON object",
+        message:
+          "Request body must be a JSON object",
       },
       { status: 400 }
     );
@@ -151,7 +220,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "notes must be a string if provided",
+        message:
+          "notes must be a string if provided",
       },
       { status: 400 }
     );
@@ -165,7 +235,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "recordedBy must be a string if provided",
+        message:
+          "recordedBy must be a string if provided",
       },
       { status: 400 }
     );
@@ -188,8 +259,12 @@ export async function POST(request: Request) {
   const validatedData = {
     assetId,
     condition,
-    ...(notes !== undefined && { notes }),
-    ...(recordedBy !== undefined && { recordedBy }),
+    ...(notes !== undefined && {
+      notes,
+    }),
+    ...(recordedBy !== undefined && {
+      recordedBy,
+    }),
     recordedAt:
       recordedAt !== undefined
         ? recordedAt
@@ -197,8 +272,12 @@ export async function POST(request: Request) {
   };
 
   try {
-    const assets = await db.orm.public.Asset.all();
-    const asset = assets.find((a) => a.id === assetId);
+    const assets =
+      await db.orm.public.Asset.all();
+
+    const asset = assets.find(
+      (a) => a.id === assetId
+    );
 
     if (!asset) {
       return NextResponse.json(
@@ -228,7 +307,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "Failed to create condition history",
+        message:
+          "Failed to create condition history",
       },
       { status: 500 }
     );

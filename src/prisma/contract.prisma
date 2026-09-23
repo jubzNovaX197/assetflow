@@ -1,359 +1,372 @@
-// prisma/schema.prisma
+enum UserRole {
+  EMPLOYEE
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+  SUSPENDED
+}
+
+enum AuthProvider {
+  CREDENTIALS
+}
+
+enum AuthAuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  PASSWORD_CHANGED
+  EMAIL_VERIFIED
+}
 
 enum AssetType {
-
-HARDWARE
-
-SOFTWARE
-
+  HARDWARE
+  SOFTWARE
 }
 
 enum AssetCategory {
-
-LAPTOP
-
-DESKTOP
-
-MONITOR
-
-MOBILE
-
-TABLET
-
-PRINTER
-
-PERIPHERAL
-
-SOFTWARE_LICENSE
-
-OTHER
-
+  LAPTOP
+  DESKTOP
+  MONITOR
+  MOBILE
+  TABLET
+  PRINTER
+  PERIPHERAL
+  SOFTWARE_LICENSE
+  OTHER
 }
 
 enum AssetCondition {
-
-EXCELLENT
-
-GOOD
-
-FAIR
-
-DAMAGED
-
+  EXCELLENT
+  GOOD
+  FAIR
+  DAMAGED
 }
 
 enum AssetStatus {
-
-AVAILABLE
-
-ASSIGNED
-
-IN_REPAIR
-
-RETURN_REQUESTED
-
-RETIRED
-
+  AVAILABLE
+  ASSIGNED
+  IN_REPAIR
+  RETURN_REQUESTED
+  RETIRED
 }
 
 enum ReturnRequestStatus {
-
-PENDING
-
-APPROVED
-
-REJECTED
-
-COMPLETED
-
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
 }
 
 enum ServiceRecordStatus {
-
-OPEN
-
-IN_PROGRESS
-
-COMPLETED
-
-CANCELLED
-
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 enum AuditAction {
-
-ASSET_CREATED
-
-ASSET_UPDATED
-
-ASSET_DELETED
-
-ASSET_ASSIGNED
-
-ASSET_RETURN_REQUESTED
-
-ASSET_RETURNED
-
-ASSET_SENT_TO_REPAIR
-
-ASSET_REPAIR_COMPLETED
-
-ASSET_RETIRED
-
-CONDITION_UPDATED
-
+  ASSET_CREATED
+  ASSET_UPDATED
+  ASSET_DELETED
+  ASSET_ASSIGNED
+  ASSET_RETURN_REQUESTED
+  ASSET_RETURNED
+  ASSET_SENT_TO_REPAIR
+  ASSET_REPAIR_COMPLETED
+  ASSET_RETIRED
+  CONDITION_UPDATED
 }
 
 model Employee {
+  id             String             @id @default(uuid())
 
-id             String             @id @default(uuid())
+  employeeCode   String             @unique
+  name           String
+  email          String             @unique
+  department     String
+  designation    String?
+  phone          String?
 
-employeeCode   String             @unique
+  isActive       Boolean            @default(true)
 
-name           String
+  createdAt      TimestamptzString  @default(now())
+  updatedAt      TimestamptzString  @default(now())
 
-email          String             @unique
+  account        UserAccount?
 
-department     String
+  assignments    Assignment[]
+  returnRequests ReturnRequest[]
 
-designation    String?
+  @@index([department])
+  @@index([isActive])
 
-phone          String?
+  @@map("employees")
+}
 
-isActive       Boolean            @default(true)
+model UserAccount {
+  id                  String         @id @default(uuid())
 
-createdAt      TimestamptzString  @default(now())
+  employeeId          String         @unique
 
-updatedAt      TimestamptzString  @default(now())
+  email               String         @unique
+  passwordHash        String
 
-assignments    Assignment[]
+  role                UserRole       @default(EMPLOYEE)
+  status              AccountStatus  @default(ACTIVE)
+  provider            AuthProvider   @default(CREDENTIALS)
 
-returnRequests ReturnRequest[]
+  emailVerifiedAt     TimestamptzString?
 
-@@index([department])
+  lastLoginAt         TimestamptzString?
+  lastFailedLoginAt   TimestamptzString?
 
-@@index([isActive])
+  failedLoginAttempts Int              @default(0)
+  lockedUntil         TimestamptzString?
 
-@@map("employees")
+  passwordChangedAt   TimestamptzString?
+  createdAt            TimestamptzString  @default(now())
+  updatedAt            TimestamptzString  @default(now())
 
+  employee            Employee       @relation(
+    fields: [employeeId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  authAuditLogs       AuthAuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([employeeId])
+
+  @@map("user_accounts")
+}
+
+model AuthAuditLog {
+  id          String             @id @default(uuid())
+
+  accountId   String?
+  action      AuthAuditAction
+
+  email       String?
+
+  ipAddress   String?
+  userAgent   String?
+
+  metadata    Json?
+
+  createdAt   TimestamptzString  @default(now())
+
+  account     UserAccount?       @relation(
+    fields: [accountId],
+    references: [id],
+    onDelete: SetNull
+  )
+
+  @@index([accountId])
+  @@index([action])
+  @@index([email])
+  @@index([createdAt])
+
+  @@map("auth_audit_logs")
 }
 
 model Asset {
+  id               String             @id @default(uuid())
 
-id               String             @id @default(uuid())
+  assetTag         String             @unique
+  name             String
 
-assetTag         String             @unique
+  assetType        AssetType
+  category         AssetCategory
 
-name             String
+  manufacturer     String?
+  model            String?
+  serialNumber     String?            @unique
+  description      String?
 
-assetType        AssetType
+  purchaseDate     TimestamptzString?
+  purchasePrice    Decimal?
 
-category         AssetCategory
+  warrantyExpiry   TimestamptzString?
 
-manufacturer     String?
+  licenseKey       String?
+  licenseExpiry    TimestamptzString?
 
-model            String?
+  condition        AssetCondition
+  status           AssetStatus
 
-serialNumber     String?            @unique
+  createdAt        TimestamptzString  @default(now())
+  updatedAt        TimestamptzString  @default(now())
 
-description      String?
+  assignments      Assignment[]
+  returnRequests   ReturnRequest[]
+  serviceRecords   ServiceRecord[]
+  conditionHistory ConditionHistory[]
+  auditLogs        AuditLog[]
 
-purchaseDate     TimestamptzString?
+  @@index([assetTag])
+  @@index([serialNumber])
+  @@index([status])
+  @@index([assetType])
+  @@index([category])
+  @@index([warrantyExpiry])
+  @@index([licenseExpiry])
 
-purchasePrice    Decimal?
-
-warrantyExpiry   TimestamptzString?
-
-licenseKey       String?
-
-licenseExpiry    TimestamptzString?
-
-condition        AssetCondition
-
-status           AssetStatus
-
-createdAt        TimestamptzString  @default(now())
-
-updatedAt        TimestamptzString  @default(now())
-
-assignments      Assignment[]
-
-returnRequests   ReturnRequest[]
-
-serviceRecords   ServiceRecord[]
-
-conditionHistory ConditionHistory[]
-
-auditLogs        AuditLog[]
-
-@@index([assetTag])
-
-@@index([serialNumber])
-
-@@index([status])
-
-@@index([assetType])
-
-@@index([category])
-
-@@index([warrantyExpiry])
-
-@@index([licenseExpiry])
-
-@@map("assets")
-
+  @@map("assets")
 }
 
 model Assignment {
+  id                String             @id @default(uuid())
 
-id                String             @id @default(uuid())
+  assetId           String
+  employeeId        String
 
-assetId           String
+  assignedAt        TimestamptzString  @default(now())
+  returnedAt        TimestamptzString?
 
-employeeId        String
+  assignedCondition AssetCondition
+  returnedCondition AssetCondition?
 
-assignedAt        TimestamptzString  @default(now())
+  notes             String?
 
-returnedAt        TimestamptzString?
+  asset             Asset              @relation(
+    fields: [assetId],
+    references: [id],
+    onDelete: Restrict
+  )
 
-assignedCondition AssetCondition
+  employee          Employee           @relation(
+    fields: [employeeId],
+    references: [id],
+    onDelete: Restrict
+  )
 
-returnedCondition AssetCondition?
+  @@index([assetId])
+  @@index([employeeId])
+  @@index([assignedAt])
 
-notes             String?
-
-asset             Asset              @relation(fields:[assetId], references:[id], onDelete: Restrict)
-
-employee          Employee           @relation(fields:[employeeId], references:[id], onDelete: Restrict)
-
-@@index([assetId])
-
-@@index([employeeId])
-
-@@index([assignedAt])
-
-@@map("assignments")
-
+  @@map("assignments")
 }
 
 model ReturnRequest {
+  id          String              @id @default(uuid())
 
-id          String              @id @default(uuid())
+  assetId     String
+  employeeId  String
 
-assetId     String
+  reason      String
 
-employeeId  String
+  status      ReturnRequestStatus  @default(PENDING)
 
-reason      String
+  requestedAt TimestamptzString   @default(now())
+  processedAt TimestamptzString?
 
-status      ReturnRequestStatus @default(PENDING)
+  notes       String?
 
-requestedAt TimestamptzString   @default(now())
+  asset       Asset               @relation(
+    fields: [assetId],
+    references: [id],
+    onDelete: Restrict
+  )
 
-processedAt TimestamptzString?
+  employee    Employee            @relation(
+    fields: [employeeId],
+    references: [id],
+    onDelete: Restrict
+  )
 
-notes       String?
+  @@index([assetId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([requestedAt])
 
-asset       Asset               @relation(fields:[assetId], references:[id], onDelete: Restrict)
-
-employee    Employee            @relation(fields:[employeeId], references:[id], onDelete: Restrict)
-
-@@index([assetId])
-
-@@index([employeeId])
-
-@@index([status])
-
-@@index([requestedAt])
-
-@@map("return_requests")
-
+  @@map("return_requests")
 }
 
 model ServiceRecord {
+  id         String              @id @default(uuid())
 
-id         String              @id @default(uuid())
+  assetId    String
 
-assetId    String
+  issue      String
+  vendor     String?
+  cost       Decimal?
 
-issue      String
+  openedAt   TimestamptzString   @default(now())
+  resolvedAt TimestamptzString?
 
-vendor     String?
+  status     ServiceRecordStatus @default(OPEN)
 
-cost       Decimal?
+  resolution String?
+  notes      String?
 
-openedAt   TimestamptzString   @default(now())
+  asset      Asset               @relation(
+    fields: [assetId],
+    references: [id],
+    onDelete: Restrict
+  )
 
-resolvedAt TimestamptzString?
+  @@index([assetId])
+  @@index([status])
+  @@index([openedAt])
 
-status     ServiceRecordStatus @default(OPEN)
-
-resolution String?
-
-notes      String?
-
-asset      Asset               @relation(fields:[assetId], references:[id], onDelete: Restrict)
-
-@@index([assetId])
-
-@@index([status])
-
-@@index([openedAt])
-
-@@map("service_records")
-
+  @@map("service_records")
 }
 
 model ConditionHistory {
+  id         String             @id @default(uuid())
 
-id         String             @id @default(uuid())
+  assetId    String
+  condition  AssetCondition
 
-assetId    String
+  notes      String?
 
-condition  AssetCondition
+  recordedAt TimestamptzString  @default(now())
+  recordedBy String?
 
-notes      String?
+  asset      Asset              @relation(
+    fields: [assetId],
+    references: [id],
+    onDelete: Restrict
+  )
 
-recordedAt TimestamptzString  @default(now())
+  @@index([assetId])
+  @@index([recordedAt])
 
-recordedBy String?
-
-asset      Asset              @relation(fields:[assetId], references:[id], onDelete: Restrict)
-
-@@index([assetId])
-
-@@index([recordedAt])
-
-@@map("condition_history")
-
+  @@map("condition_history")
 }
 
 model AuditLog {
+  id        String             @id @default(uuid())
 
-id        String             @id @default(uuid())
+  assetId   String?
+  action    AuditAction
+  actor     String
 
-assetId   String?
+  oldStatus AssetStatus?
+  newStatus AssetStatus?
 
-action    AuditAction
+  metadata  Json?
 
-actor     String
+  createdAt TimestamptzString  @default(now())
 
-oldStatus AssetStatus?
+  asset     Asset?             @relation(
+    fields: [assetId],
+    references: [id],
+    onDelete: SetNull
+  )
 
-newStatus AssetStatus?
+  @@index([assetId])
+  @@index([action])
+  @@index([createdAt])
 
-metadata  Json?
-
-createdAt TimestamptzString  @default(now())
-
-asset     Asset?             @relation(fields:[assetId], references:[id], onDelete: SetNull)
-
-@@index([assetId])
-
-@@index([action])
-
-@@index([createdAt])
-
-@@map("audit_logs")
-
+  @@map("audit_logs")
 }

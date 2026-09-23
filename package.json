@@ -14,11 +14,13 @@
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@prisma/orm-postgres": "^8.0.0-rc.11",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
     "dotenv": "^17.4.2",
     "lucide-react": "^1.45.0",
     "next": "16.3.5",
+    "next-auth": "^4.24.15",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "^4.21.0",

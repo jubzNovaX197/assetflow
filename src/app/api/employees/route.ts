@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const ALLOWED_FIELDS = [
@@ -14,10 +15,32 @@ const ALLOWED_FIELDS = [
 
 export async function GET() {
   try {
+    await requireAdminApiSession();
+
     const employees = await db.orm.public.Employee.all();
 
     return NextResponse.json(employees, { status: 200 });
   } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Authentication required",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Administrator access required",
+        },
+        { status: 403 }
+      );
+    }
+
     console.error("Failed to fetch employees:", error);
 
     return NextResponse.json(
@@ -31,6 +54,40 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Authentication required",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Administrator access required",
+        },
+        { status: 403 }
+      );
+    }
+
+    console.error("Employee authorization error:", error);
+
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Unable to verify administrator access",
+      },
+      { status: 500 }
+    );
+  }
+
   let body: unknown;
 
   try {
@@ -169,12 +226,16 @@ export async function POST(request: Request) {
   }
 
   const validatedData = {
-    employeeCode,
-    name,
-    email,
-    department,
-    ...(designation !== undefined && { designation }),
-    ...(phone !== undefined && { phone }),
+    employeeCode: employeeCode.trim(),
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    department: department.trim(),
+    ...(designation !== undefined && {
+      designation: designation.trim(),
+    }),
+    ...(phone !== undefined && {
+      phone: phone.trim(),
+    }),
     ...(isActive !== undefined && { isActive }),
   };
 

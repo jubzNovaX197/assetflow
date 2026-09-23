@@ -1,10 +1,46 @@
 import { NextResponse } from "next/server";
+
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: Request) {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Authentication required",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Administrator access required",
+        },
+        { status: 403 }
+      );
+    }
+
+    console.error("Employee authorization error:", error);
+
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Unable to verify administrator access",
+      },
+      { status: 500 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const employeeId = searchParams.get("id");
 

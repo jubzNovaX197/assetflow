@@ -16,6 +16,10 @@
       "model": "AuditLog",
       "namespace": "public"
     },
+    "auth_audit_logs": {
+      "model": "AuthAuditLog",
+      "namespace": "public"
+    },
     "condition_history": {
       "model": "ConditionHistory",
       "namespace": "public"
@@ -31,12 +35,37 @@
     "service_records": {
       "model": "ServiceRecord",
       "namespace": "public"
+    },
+    "user_accounts": {
+      "model": "UserAccount",
+      "namespace": "public"
     }
   },
   "domain": {
     "namespaces": {
       "public": {
         "enum": {
+          "AccountStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "ACTIVE",
+                "value": "ACTIVE"
+              },
+              {
+                "name": "INACTIVE",
+                "value": "INACTIVE"
+              },
+              {
+                "name": "LOCKED",
+                "value": "LOCKED"
+              },
+              {
+                "name": "SUSPENDED",
+                "value": "SUSPENDED"
+              }
+            ]
+          },
           "AssetCategory": {
             "codecId": "pg/text@1",
             "members": [
@@ -182,6 +211,48 @@
               }
             ]
           },
+          "AuthAuditAction": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "LOGIN_SUCCESS",
+                "value": "LOGIN_SUCCESS"
+              },
+              {
+                "name": "LOGIN_FAILED",
+                "value": "LOGIN_FAILED"
+              },
+              {
+                "name": "LOGOUT",
+                "value": "LOGOUT"
+              },
+              {
+                "name": "ACCOUNT_LOCKED",
+                "value": "ACCOUNT_LOCKED"
+              },
+              {
+                "name": "ACCOUNT_UNLOCKED",
+                "value": "ACCOUNT_UNLOCKED"
+              },
+              {
+                "name": "PASSWORD_CHANGED",
+                "value": "PASSWORD_CHANGED"
+              },
+              {
+                "name": "EMAIL_VERIFIED",
+                "value": "EMAIL_VERIFIED"
+              }
+            ]
+          },
+          "AuthProvider": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "CREDENTIALS",
+                "value": "CREDENTIALS"
+              }
+            ]
+          },
           "ReturnRequestStatus": {
             "codecId": "pg/text@1",
             "members": [
@@ -221,6 +292,19 @@
               {
                 "name": "CANCELLED",
                 "value": "CANCELLED"
+              }
+            ]
+          },
+          "UserRole": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "EMPLOYEE",
+                "value": "EMPLOYEE"
+              },
+              {
+                "name": "ADMIN",
+                "value": "ADMIN"
               }
             ]
           }
@@ -779,6 +863,120 @@
               "table": "audit_logs"
             }
           },
+          "AuthAuditLog": {
+            "fields": {
+              "accountId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "action": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AuthAuditAction",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "email": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "ipAddress": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "metadata": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/json@1",
+                  "kind": "scalar"
+                }
+              },
+              "userAgent": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "account": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "accountId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "UserAccount",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "accountId": {
+                  "column": "accountId"
+                },
+                "action": {
+                  "column": "action"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "ipAddress": {
+                  "column": "ipAddress"
+                },
+                "metadata": {
+                  "column": "metadata"
+                },
+                "userAgent": {
+                  "column": "userAgent"
+                }
+              },
+              "namespaceId": "public",
+              "table": "auth_audit_logs"
+            }
+          },
           "ConditionHistory": {
             "fields": {
               "assetId": {
@@ -947,6 +1145,22 @@
               }
             },
             "relations": {
+              "account": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "employeeId"
+                  ]
+                },
+                "to": {
+                  "model": "UserAccount",
+                  "namespace": "public"
+                }
+              },
               "assignments": {
                 "cardinality": "1:N",
                 "on": {
@@ -1277,6 +1491,217 @@
               },
               "namespaceId": "public",
               "table": "service_records"
+            }
+          },
+          "UserAccount": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "email": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "emailVerifiedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "employeeId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "failedLoginAttempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastFailedLoginAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastLoginAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "lockedUntil": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "passwordChangedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "passwordHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "provider": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AuthProvider",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "role": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "UserRole",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "AccountStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "authAuditLogs": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "accountId"
+                  ]
+                },
+                "to": {
+                  "model": "AuthAuditLog",
+                  "namespace": "public"
+                }
+              },
+              "employee": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "employeeId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Employee",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "emailVerifiedAt": {
+                  "column": "emailVerifiedAt"
+                },
+                "employeeId": {
+                  "column": "employeeId"
+                },
+                "failedLoginAttempts": {
+                  "column": "failedLoginAttempts"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastFailedLoginAt": {
+                  "column": "lastFailedLoginAt"
+                },
+                "lastLoginAt": {
+                  "column": "lastLoginAt"
+                },
+                "lockedUntil": {
+                  "column": "lockedUntil"
+                },
+                "passwordChangedAt": {
+                  "column": "passwordChangedAt"
+                },
+                "passwordHash": {
+                  "column": "passwordHash"
+                },
+                "provider": {
+                  "column": "provider"
+                },
+                "role": {
+                  "column": "role"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "user_accounts"
             }
           }
         }
@@ -1786,6 +2211,126 @@
               },
               "uniques": []
             },
+            "auth_audit_logs": {
+              "checks": [
+                {
+                  "expression": "\"action\" IN ('LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGOUT', 'ACCOUNT_LOCKED', 'ACCOUNT_UNLOCKED', 'PASSWORD_CHANGED', 'EMAIL_VERIFIED')",
+                  "name": "auth_audit_logs_action_check_35d7acbf",
+                  "prefix": "auth_audit_logs_action_check"
+                }
+              ],
+              "columns": {
+                "accountId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "action": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AuthAuditAction",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "email": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "ipAddress": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "metadata": {
+                  "codecId": "pg/json@1",
+                  "nativeType": "json",
+                  "nullable": true
+                },
+                "userAgent": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "accountId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "auth_audit_logs"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user_accounts"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "accountId"
+                  ],
+                  "name": "auth_audit_logs_accountId_idx_cbfb3085",
+                  "prefix": "auth_audit_logs_accountId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "action"
+                  ],
+                  "name": "auth_audit_logs_action_idx_cd0d2116",
+                  "prefix": "auth_audit_logs_action_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "createdAt"
+                  ],
+                  "name": "auth_audit_logs_createdAt_idx_9575dbd7",
+                  "prefix": "auth_audit_logs_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "email"
+                  ],
+                  "name": "auth_audit_logs_email_idx_46df9cad",
+                  "prefix": "auth_audit_logs_email_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "condition_history": {
               "checks": [
                 {
@@ -2248,9 +2793,226 @@
                 ]
               },
               "uniques": []
+            },
+            "user_accounts": {
+              "checks": [
+                {
+                  "expression": "\"provider\" IN ('CREDENTIALS')",
+                  "name": "user_accounts_provider_check_7c1f29ce",
+                  "prefix": "user_accounts_provider_check"
+                },
+                {
+                  "expression": "\"role\" IN ('EMPLOYEE', 'ADMIN')",
+                  "name": "user_accounts_role_check_764d8b9a",
+                  "prefix": "user_accounts_role_check"
+                },
+                {
+                  "expression": "\"status\" IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'SUSPENDED')",
+                  "name": "user_accounts_status_check_fde9a34a",
+                  "prefix": "user_accounts_status_check"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "email": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "emailVerifiedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "employeeId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "failedLoginAttempts": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "lastFailedLoginAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "lastLoginAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "lockedUntil": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "passwordChangedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "passwordHash": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "provider": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "CREDENTIALS"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AuthProvider",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "role": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "EMPLOYEE"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "UserRole",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "ACTIVE"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "AccountStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "employeeId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user_accounts"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "employees"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "email"
+                  ],
+                  "name": "user_accounts_email_idx_46df9cad",
+                  "prefix": "user_accounts_email_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "employeeId"
+                  ],
+                  "name": "user_accounts_employeeId_idx_087dd4a6",
+                  "prefix": "user_accounts_employeeId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "role"
+                  ],
+                  "name": "user_accounts_role_idx_2c1ddf83",
+                  "prefix": "user_accounts_role_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "status"
+                  ],
+                  "name": "user_accounts_status_idx_e98638ab",
+                  "prefix": "user_accounts_status_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "employeeId"
+                  ]
+                },
+                {
+                  "columns": [
+                    "email"
+                  ]
+                }
+              ]
             }
           },
           "valueSet": {
+            "AccountStatus": {
+              "kind": "valueSet",
+              "values": [
+                "ACTIVE",
+                "INACTIVE",
+                "LOCKED",
+                "SUSPENDED"
+              ]
+            },
             "AssetCategory": {
               "kind": "valueSet",
               "values": [
@@ -2306,6 +3068,24 @@
                 "CONDITION_UPDATED"
               ]
             },
+            "AuthAuditAction": {
+              "kind": "valueSet",
+              "values": [
+                "LOGIN_SUCCESS",
+                "LOGIN_FAILED",
+                "LOGOUT",
+                "ACCOUNT_LOCKED",
+                "ACCOUNT_UNLOCKED",
+                "PASSWORD_CHANGED",
+                "EMAIL_VERIFIED"
+              ]
+            },
+            "AuthProvider": {
+              "kind": "valueSet",
+              "values": [
+                "CREDENTIALS"
+              ]
+            },
             "ReturnRequestStatus": {
               "kind": "valueSet",
               "values": [
@@ -2323,6 +3103,13 @@
                 "COMPLETED",
                 "CANCELLED"
               ]
+            },
+            "UserRole": {
+              "kind": "valueSet",
+              "values": [
+                "EMPLOYEE",
+                "ADMIN"
+              ]
             }
           }
         },
@@ -2330,10 +3117,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c0f9a2a5a219d9467c3a45f6e8e0440fc3e21cbfa617621ac53371f4f1e1a8f3"
+    "storageHash": "e2e3ae9c86723166d905f7195cc57cf74d9c6156d7b5b768ef1541cc40d46efe"
   },
   "execution": {
-    "executionHash": "47c0f2fbb9850a4892b80bffb91f342f1d5abba04fdc9d1d8e5ba7b60a8e8cf0",
+    "executionHash": "0f5dc63cbbeb62f14ada49712551aef863f10c00680d3ac1373ae07cae2f2068",
     "mutations": {
       "defaults": [
         {
@@ -2367,6 +3154,17 @@
             "column": "id",
             "namespace": "public",
             "table": "audit_logs"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "auth_audit_logs"
           }
         },
         {
@@ -2411,6 +3209,17 @@
             "column": "id",
             "namespace": "public",
             "table": "service_records"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "user_accounts"
           }
         }
       ]

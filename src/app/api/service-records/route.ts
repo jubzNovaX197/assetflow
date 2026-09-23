@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const ALLOWED_FIELDS = [
@@ -38,14 +39,68 @@ function isServiceRecordStatus(
   );
 }
 
+function adminErrorResponse(error: unknown) {
+  if (
+    error instanceof Error &&
+    error.message === "UNAUTHORIZED"
+  ) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (
+    error instanceof Error &&
+    error.message === "FORBIDDEN"
+  ) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Administrator access required",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error(
+    "Service record authorization error:",
+    error
+  );
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message:
+        "Unable to verify administrator access",
+    },
+    { status: 500 }
+  );
+}
+
 export async function GET() {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   try {
     const serviceRecords =
       await db.orm.public.ServiceRecord.all();
 
-    return NextResponse.json(serviceRecords, { status: 200 });
+    return NextResponse.json(
+      serviceRecords,
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("Failed to fetch service records:", error);
+    console.error(
+      "Failed to fetch service records:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -58,12 +113,21 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   let body: unknown;
 
   try {
     body = await request.json();
   } catch (error) {
-    console.error("Failed to parse request JSON:", error);
+    console.error(
+      "Failed to parse request JSON:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -82,7 +146,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "Request body must be a JSON object",
+        message:
+          "Request body must be a JSON object",
       },
       { status: 400 }
     );
@@ -126,7 +191,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "assetId is required and must be a valid UUID",
+        message:
+          "assetId is required and must be a valid UUID",
       },
       { status: 400 }
     );
@@ -146,21 +212,29 @@ export async function POST(request: Request) {
     );
   }
 
-  if (vendor !== undefined && typeof vendor !== "string") {
+  if (
+    vendor !== undefined &&
+    typeof vendor !== "string"
+  ) {
     return NextResponse.json(
       {
         status: "error",
-        message: "vendor must be a string if provided",
+        message:
+          "vendor must be a string if provided",
       },
       { status: 400 }
     );
   }
 
-  if (cost !== undefined && typeof cost !== "number") {
+  if (
+    cost !== undefined &&
+    typeof cost !== "number"
+  ) {
     return NextResponse.json(
       {
         status: "error",
-        message: "cost must be a number if provided",
+        message:
+          "cost must be a number if provided",
       },
       { status: 400 }
     );
@@ -168,8 +242,10 @@ export async function POST(request: Request) {
 
   if (
     openedAt !== undefined &&
-    (typeof openedAt !== "string" ||
-      Number.isNaN(Date.parse(openedAt)))
+    (
+      typeof openedAt !== "string" ||
+      Number.isNaN(Date.parse(openedAt))
+    )
   ) {
     return NextResponse.json(
       {
@@ -183,8 +259,10 @@ export async function POST(request: Request) {
 
   if (
     resolvedAt !== undefined &&
-    (typeof resolvedAt !== "string" ||
-      Number.isNaN(Date.parse(resolvedAt)))
+    (
+      typeof resolvedAt !== "string" ||
+      Number.isNaN(Date.parse(resolvedAt))
+    )
   ) {
     return NextResponse.json(
       {
@@ -196,7 +274,10 @@ export async function POST(request: Request) {
     );
   }
 
-  if (status !== undefined && !isServiceRecordStatus(status)) {
+  if (
+    status !== undefined &&
+    !isServiceRecordStatus(status)
+  ) {
     return NextResponse.json(
       {
         status: "error",
@@ -214,17 +295,22 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "resolution must be a string if provided",
+        message:
+          "resolution must be a string if provided",
       },
       { status: 400 }
     );
   }
 
-  if (notes !== undefined && typeof notes !== "string") {
+  if (
+    notes !== undefined &&
+    typeof notes !== "string"
+  ) {
     return NextResponse.json(
       {
         status: "error",
-        message: "notes must be a string if provided",
+        message:
+          "notes must be a string if provided",
       },
       { status: 400 }
     );
@@ -232,23 +318,36 @@ export async function POST(request: Request) {
 
   const validatedData = {
     assetId,
-    issue,
+    issue: issue.trim(),
     status: status ?? ("OPEN" as const),
     openedAt:
       openedAt !== undefined
         ? openedAt
         : new Date().toISOString(),
-    ...(vendor !== undefined && { vendor }),
-    ...(cost !== undefined && { cost: String(cost) }),
-    ...(resolvedAt !== undefined && { resolvedAt }),
-    ...(resolution !== undefined && { resolution }),
-    ...(notes !== undefined && { notes }),
+    ...(vendor !== undefined && {
+      vendor,
+    }),
+    ...(cost !== undefined && {
+      cost: String(cost),
+    }),
+    ...(resolvedAt !== undefined && {
+      resolvedAt,
+    }),
+    ...(resolution !== undefined && {
+      resolution,
+    }),
+    ...(notes !== undefined && {
+      notes,
+    }),
   };
 
   try {
-    const assets = await db.orm.public.Asset.all();
+    const assets =
+      await db.orm.public.Asset.all();
 
-    const asset = assets.find((a) => a.id === assetId);
+    const asset = assets.find(
+      (a) => a.id === assetId
+    );
 
     if (!asset) {
       return NextResponse.json(
@@ -265,7 +364,10 @@ export async function POST(request: Request) {
         validatedData
       );
 
-    return NextResponse.json(serviceRecord, { status: 201 });
+    return NextResponse.json(
+      serviceRecord,
+      { status: 201 }
+    );
   } catch (error) {
     console.error(
       "Failed to create service record:",
@@ -275,7 +377,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         status: "error",
-        message: "Failed to create service record",
+        message:
+          "Failed to create service record",
       },
       { status: 500 }
     );

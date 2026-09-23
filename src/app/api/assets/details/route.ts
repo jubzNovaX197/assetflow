@@ -1,14 +1,51 @@
 import { NextResponse } from "next/server";
+
+import { requireAdminApiSession } from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function GET(
-  request: Request
-) {
-  const url = new URL(request.url);
+function adminErrorResponse(error: unknown) {
+  if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
 
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Administrator access required",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error("Asset authorization error:", error);
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message: "Unable to verify administrator access",
+    },
+    { status: 500 }
+  );
+}
+
+export async function GET(request: Request) {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
+  const url = new URL(request.url);
   const assetId = url.searchParams.get("id");
 
   if (!assetId || !UUID_REGEX.test(assetId)) {
@@ -25,7 +62,6 @@ export async function GET(
     // --------------------------------------------------
     // 1. Get the asset
     // --------------------------------------------------
-
     const assets = await db.orm.public.Asset.all();
 
     const asset = assets.find(
@@ -45,7 +81,6 @@ export async function GET(
     // --------------------------------------------------
     // 2. Get assignments for this asset
     // --------------------------------------------------
-
     const assignments =
       await db.orm.public.Assignment.all();
 
@@ -63,7 +98,6 @@ export async function GET(
     // --------------------------------------------------
     // 3. Find current assignment
     // --------------------------------------------------
-
     const currentAssignment =
       assetAssignments.find(
         (assignment) =>
@@ -73,7 +107,6 @@ export async function GET(
     // --------------------------------------------------
     // 4. Get employees
     // --------------------------------------------------
-
     const employees =
       await db.orm.public.Employee.all();
 
@@ -88,105 +121,88 @@ export async function GET(
     // --------------------------------------------------
     // 5. Get service records
     // --------------------------------------------------
-
     const serviceRecords =
       await db.orm.public.ServiceRecord.all();
 
-    const assetServiceRecords =
-      serviceRecords
-        .filter(
-          (record) =>
-            record.assetId === assetId
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.openedAt).getTime() -
-            new Date(a.openedAt).getTime()
-        );
+    const assetServiceRecords = serviceRecords
+      .filter(
+        (record) =>
+          record.assetId === assetId
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.openedAt).getTime() -
+          new Date(a.openedAt).getTime()
+      );
 
     // --------------------------------------------------
     // 6. Get condition history
     // --------------------------------------------------
-
     const conditionHistory =
       await db.orm.public.ConditionHistory.all();
 
-    const assetConditionHistory =
-      conditionHistory
-        .filter(
-          (record) =>
-            record.assetId === assetId
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.recordedAt).getTime() -
-            new Date(a.recordedAt).getTime()
-        );
+    const assetConditionHistory = conditionHistory
+      .filter(
+        (record) =>
+          record.assetId === assetId
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.recordedAt).getTime() -
+          new Date(a.recordedAt).getTime()
+      );
 
     // --------------------------------------------------
     // 7. Get return requests
     // --------------------------------------------------
-
     const returnRequests =
       await db.orm.public.ReturnRequest.all();
 
-    const assetReturnRequests =
-      returnRequests
-        .filter(
-          (request) =>
-            request.assetId === assetId
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.requestedAt).getTime() -
-            new Date(a.requestedAt).getTime()
-        );
+    const assetReturnRequests = returnRequests
+      .filter(
+        (request) =>
+          request.assetId === assetId
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.requestedAt).getTime() -
+          new Date(a.requestedAt).getTime()
+      );
 
     // --------------------------------------------------
     // 8. Get audit logs
     // --------------------------------------------------
-
     const auditLogs =
       await db.orm.public.AuditLog.all();
 
-    const assetAuditLogs =
-      auditLogs
-        .filter(
-          (log) =>
-            log.assetId === assetId
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() -
-            new Date(a.createdAt).getTime()
-        );
+    const assetAuditLogs = auditLogs
+      .filter(
+        (log) =>
+          log.assetId === assetId
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() -
+          new Date(a.createdAt).getTime()
+      );
 
     // --------------------------------------------------
     // 9. Return complete asset details
     // --------------------------------------------------
-
     return NextResponse.json(
       {
         status: "success",
-
         asset,
-
         currentEmployee,
-
         currentAssignment:
           currentAssignment ?? null,
-
         assignments: assetAssignments,
-
         serviceRecords:
           assetServiceRecords,
-
         conditionHistory:
           assetConditionHistory,
-
         returnRequests:
           assetReturnRequests,
-
         auditLogs:
           assetAuditLogs,
       },

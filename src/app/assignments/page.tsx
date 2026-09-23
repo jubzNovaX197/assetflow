@@ -349,14 +349,14 @@ export default function AssignmentsPage() {
 
   return (
     <AppShell title="Assignments">
-      <div className="flex flex-col gap-6">
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6 bg-[#080b12] -m-4 p-4 md:-m-6 md:p-6 lg:-m-8 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
               Assignments
             </h1>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               Track custody history of assets assigned to employees.
             </p>
           </div>
@@ -374,8 +374,8 @@ export default function AssignmentsPage() {
         {availableAssets.length === 0 &&
           !isLoading &&
           !error && (
-            <div className="rounded-md border bg-muted/30 p-4">
-              <p className="text-sm font-medium text-foreground">
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
+              <p className="text-sm font-medium text-white">
                 No available assets
               </p>
 
@@ -398,39 +398,39 @@ export default function AssignmentsPage() {
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-destructive" />
 
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-sm font-medium text-white">
               {error}
             </p>
           </div>
         ) : assignments.length === 0 ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-sm font-medium text-white">
               No assignments found
             </p>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               Assignments will appear here once assets are assigned
               to employees.
             </p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto rounded-md border">
+          <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Asset</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Assigned At</TableHead>
-                  <TableHead>Assigned Condition</TableHead>
-                  <TableHead>Returned At</TableHead>
-                  <TableHead>Returned Condition</TableHead>
-                  <TableHead>Notes</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+              <TableHeader className="bg-slate-900/70">
+                <TableRow className="border-slate-800 hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Employee</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Assigned At</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Assigned Condition</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Returned At</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Returned Condition</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Notes</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
 
-              <TableBody>
+              <TableBody className="divide-y divide-slate-800/70">
                 {assignments.map((assignment) => {
                   const asset = assetMap.get(
                     assignment.assetId
@@ -448,30 +448,30 @@ export default function AssignmentsPage() {
                     asset?.status === "ASSIGNED";
 
                   return (
-                    <TableRow key={assignment.id}>
-                      <TableCell className="font-medium text-foreground">
+                    <TableRow key={assignment.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                      <TableCell className="font-semibold text-white">
                         {asset
                           ? `${asset.name} (${asset.assetTag})`
                           : "Unknown asset"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         {employee
                           ? `${employee.name} (${employee.employeeCode})`
                           : "Unknown employee"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         {formatDateTime(
                           assignment.assignedAt
                         )}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         {assignment.assignedCondition}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         {assignment.returnedAt
                           ? formatDateTime(
                               assignment.returnedAt
@@ -479,16 +479,16 @@ export default function AssignmentsPage() {
                           : "Active"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         {assignment.returnedCondition ??
                           "—"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         {assignment.notes ?? "—"}
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         <Badge
                           variant={
                             isActive
@@ -502,11 +502,11 @@ export default function AssignmentsPage() {
                         </Badge>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="text-sm text-slate-400">
                         {canRequestReturn ? (
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-300"
                             size="sm"
                             onClick={() =>
                               openReturnDialog(
@@ -567,7 +567,7 @@ export default function AssignmentsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="assignment-asset"
-                  className="text-sm font-medium text-foreground"
+                  className="text-sm font-medium text-white"
                 >
                   Asset <span className="text-destructive">*</span>
                 </label>
@@ -599,7 +599,7 @@ export default function AssignmentsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="assignment-employee"
-                  className="text-sm font-medium text-foreground"
+                  className="text-sm font-medium text-white"
                 >
                   Employee{" "}
                   <span className="text-destructive">*</span>
@@ -635,7 +635,7 @@ export default function AssignmentsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="assigned-at"
-                  className="text-sm font-medium text-foreground"
+                  className="text-sm font-medium text-white"
                 >
                   Assignment Date & Time{" "}
                   <span className="text-destructive">*</span>
@@ -656,7 +656,7 @@ export default function AssignmentsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="assigned-condition"
-                  className="text-sm font-medium text-foreground"
+                  className="text-sm font-medium text-white"
                 >
                   Condition at Assignment{" "}
                   <span className="text-destructive">*</span>
@@ -687,7 +687,7 @@ export default function AssignmentsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="assignment-notes"
-                  className="text-sm font-medium text-foreground"
+                  className="text-sm font-medium text-white"
                 >
                   Notes
                 </label>
@@ -720,7 +720,7 @@ export default function AssignmentsPage() {
             <div className="mt-6 flex justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-300"
                 onClick={closeAssignDialog}
                 disabled={isAssignSubmitting}
               >
@@ -781,7 +781,7 @@ export default function AssignmentsPage() {
             </div>
 
             <div className="mt-6 space-y-4">
-              <div className="rounded-md border bg-muted/30 p-4">
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="font-medium text-foreground">
@@ -810,7 +810,7 @@ export default function AssignmentsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="return-reason"
-                  className="text-sm font-medium text-foreground"
+                  className="text-sm font-medium text-white"
                 >
                   Reason{" "}
                   <span className="text-destructive">*</span>
@@ -832,7 +832,7 @@ export default function AssignmentsPage() {
               <div className="space-y-2">
                 <label
                   htmlFor="return-notes"
-                  className="text-sm font-medium text-foreground"
+                  className="text-sm font-medium text-white"
                 >
                   Notes
                 </label>
@@ -863,7 +863,7 @@ export default function AssignmentsPage() {
             <div className="mt-6 flex justify-end gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="outline" className="border-slate-700 bg-transparent text-slate-300 hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-300"
                 onClick={closeReturnDialog}
                 disabled={isReturnSubmitting}
               >

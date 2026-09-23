@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, Plus, X, Pencil, UserPlus } from "lucide-react";
+import { AlertCircle, Loader2, Plus, X, Pencil, UserPlus, Search, Filter, RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
+import { getAssetHealth } from "@/lib/asset-health";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -207,6 +208,73 @@ function getStatusBadgeVariant(
     default:
       return "outline";
   }
+}
+
+function formatLabel(value: string): string {
+  return value
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getConditionBadgeVariant(
+  condition: Asset["condition"]
+): "default" | "secondary" | "destructive" | "outline" {
+  switch (condition) {
+    case "EXCELLENT":
+      return "default";
+    case "GOOD":
+      return "secondary";
+    case "FAIR":
+      return "outline";
+    case "DAMAGED":
+      return "destructive";
+    default:
+      return "outline";
+  }
+}
+
+function isExpired(value: string | null): boolean {
+  if (!value) return false;
+
+  const expiryDate = new Date(value);
+  if (Number.isNaN(expiryDate.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expiryDate.setHours(0, 0, 0, 0);
+
+  return expiryDate < today;
+}
+
+function getAssetHealthForList(asset: Asset) {
+  return getAssetHealth({
+    condition: asset.condition,
+    status: asset.status,
+    warrantyExpired: isExpired(asset.warrantyExpiry),
+    licenseExpired: isExpired(asset.licenseExpiry),
+  });
+}
+
+function getHealthBadgeClass(level: ReturnType<typeof getAssetHealthForList>["level"]): string {
+  switch (level) {
+    case "HEALTHY":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+    case "ATTENTION":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+    case "AT_RISK":
+      return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400";
+  }
+}
+
+function getStatusCounts(assets: Asset[]) {
+  return {
+    total: assets.length,
+    available: assets.filter((asset) => asset.status === "AVAILABLE").length,
+    assigned: assets.filter((asset) => asset.status === "ASSIGNED").length,
+    inRepair: assets.filter((asset) => asset.status === "IN_REPAIR").length,
+    retired: assets.filter((asset) => asset.status === "RETIRED").length,
+  };
 }
 
 function validateAssetForm(formState: AssetFormState): {
@@ -444,6 +512,22 @@ const [typeFilter, setTypeFilter] = useState("ALL");
     matchesType
   );
 });
+
+  const statusCounts = getStatusCounts(assets);
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 ||
+    statusFilter !== "ALL" ||
+    categoryFilter !== "ALL" ||
+    conditionFilter !== "ALL" ||
+    typeFilter !== "ALL";
+
+  function clearFilters() {
+    setSearchTerm("");
+    setStatusFilter("ALL");
+    setCategoryFilter("ALL");
+    setConditionFilter("ALL");
+    setTypeFilter("ALL");
+  }
 
   function updateField<K extends keyof AssetFormState>(field: K, value: string) {
     setFormState((prev) => ({ ...prev, [field]: value }));
@@ -692,18 +776,20 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
   return (
     <AppShell title="Assets">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 bg-[#080b12] -m-4 min-h-[calc(100vh-4rem)] p-4 md:-m-6 md:p-6 lg:-m-8 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-3xl font-semibold tracking-tight text-white">
               Assets
             </h1>
-            <p className="text-sm text-muted-foreground">
-              View and track all hardware and software assets in your
-              organization.
+            <p className="text-sm text-slate-400">
+              View and track all hardware and software assets in your organization.
+            </p>
+            <p className="text-xs text-slate-500">
+              Showing {filteredAssets.length} of {assets.length} assets
             </p>
           </div>
-          <Button onClick={openDialog} className="w-full sm:w-auto">
+          <Button onClick={openDialog} className="w-full bg-violet-600 text-white shadow-lg shadow-violet-950/30 hover:bg-violet-500 sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Asset
           </Button>
@@ -716,163 +802,134 @@ const [typeFilter, setTypeFilter] = useState("ALL");
           </div>
         ) : error ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-            <AlertCircle className="h-8 w-8 text-destructive" />
-            <p className="text-sm font-medium text-foreground">{error}</p>
+            <AlertCircle className="h-8 w-8 text-red-400" />
+            <p className="text-sm font-medium text-slate-200">{error}</p>
           </div>
         ) : assets.length === 0 ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-sm font-medium text-slate-200">
               No assets found
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               Assets will appear here once they are added.
             </p>
           </div>
         ) : (
   <>
-    <div className="rounded-md border bg-card p-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {[
+        { label: "Total Assets", value: statusCounts.total },
+        { label: "Available", value: statusCounts.available },
+        { label: "Assigned", value: statusCounts.assigned },
+        { label: "In Repair", value: statusCounts.inRepair },
+        { label: "Retired", value: statusCounts.retired },
+      ].map((item) => (
+        <div key={item.label} className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+          <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
+          <p className="mt-1 text-3xl font-semibold tracking-tight text-white">{item.value}</p>
+        </div>
+      ))}
+    </div>
+
+    <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-5 shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <div>
+            <p className="text-sm font-medium text-slate-200">Search and filters</p>
+            <p className="text-xs text-slate-500">
+              {filteredAssets.length} matching {filteredAssets.length === 1 ? "asset" : "assets"}
+            </p>
+          </div>
+        </div>
+        {hasActiveFilters && (
+          <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+            <RotateCcw className="mr-2 h-3.5 w-3.5" />
+            Clear filters
+          </Button>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
         <div className="flex flex-col gap-2 lg:col-span-1">
-          <label
-            htmlFor="asset-search"
-            className="text-sm font-medium text-foreground"
-          >
-            Search
-          </label>
-
-          <input
-            id="asset-search"
-            type="text"
-            placeholder="Search assets..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+          <label htmlFor="asset-search" className="text-sm font-medium text-slate-200">Search</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              id="asset-search"
+              type="text"
+              placeholder="Tag, name, serial..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] py-2 pl-9 pr-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+            />
+          </div>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="status-filter"
-            className="text-sm font-medium text-foreground"
-          >
-            Status
-          </label>
-
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
+          <label htmlFor="status-filter" className="text-sm font-medium text-slate-200">Status</label>
+          <select id="status-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40">
             <option value="ALL">All Statuses</option>
-            {ASSET_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status.replace(/_/g, " ")}
-              </option>
-            ))}
+            {ASSET_STATUSES.map((status) => <option key={status} value={status}>{formatLabel(status)}</option>)}
           </select>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="category-filter"
-            className="text-sm font-medium text-foreground"
-          >
-            Category
-          </label>
-
-          <select
-            id="category-filter"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
+          <label htmlFor="category-filter" className="text-sm font-medium text-slate-200">Category</label>
+          <select id="category-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40">
             <option value="ALL">All Categories</option>
-            {ASSET_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category.replace(/_/g, " ")}
-              </option>
-            ))}
+            {ASSET_CATEGORIES.map((category) => <option key={category} value={category}>{formatLabel(category)}</option>)}
           </select>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="condition-filter"
-            className="text-sm font-medium text-foreground"
-          >
-            Condition
-          </label>
-
-          <select
-            id="condition-filter"
-            value={conditionFilter}
-            onChange={(e) => setConditionFilter(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
+          <label htmlFor="condition-filter" className="text-sm font-medium text-slate-200">Condition</label>
+          <select id="condition-filter" value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40">
             <option value="ALL">All Conditions</option>
-            {ASSET_CONDITIONS.map((condition) => (
-              <option key={condition} value={condition}>
-                {condition}
-              </option>
-            ))}
+            {ASSET_CONDITIONS.map((condition) => <option key={condition} value={condition}>{formatLabel(condition)}</option>)}
           </select>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label
-            htmlFor="type-filter"
-            className="text-sm font-medium text-foreground"
-          >
-            Type
-          </label>
-
-          <select
-            id="type-filter"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
+          <label htmlFor="type-filter" className="text-sm font-medium text-slate-200">Type</label>
+          <select id="type-filter" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40">
             <option value="ALL">All Types</option>
-            {ASSET_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
+            {ASSET_TYPES.map((type) => <option key={type} value={type}>{formatLabel(type)}</option>)}
           </select>
         </div>
       </div>
     </div>
 
-    <div className="w-full overflow-x-auto rounded-md border">
+    <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
           
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Asset Tag</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Manufacturer</TableHead>
-                  <TableHead>Model</TableHead>
-                  <TableHead>Serial Number</TableHead>
-                  <TableHead>Condition</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+              <TableHeader className="bg-slate-900/70">
+                <TableRow className="border-slate-800 hover:bg-transparent">
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset Tag</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Name</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Type</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Category</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Manufacturer</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Model</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Serial Number</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Condition</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
+                  <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Health</TableHead>
+                  <TableHead className="min-w-[250px] whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="divide-y divide-slate-800/70">
                 {filteredAssets.length === 0 ? (
-                  <TableRow>
+                  <TableRow className="border-slate-800 hover:bg-transparent">
   <TableCell
-    colSpan={10}
+    colSpan={11}
     className="h-32 text-center"
   >
     <div className="flex flex-col items-center justify-center gap-1">
-      <p className="text-sm font-medium text-foreground">
+      <p className="text-sm font-medium text-slate-200">
         No matching assets found
       </p>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-slate-400">
         Try adjusting your search or filters.
       </p>
     </div>
@@ -880,23 +937,48 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 </TableRow>
 ) : (
     filteredAssets.map((asset) => (
-                  <TableRow key={asset.id}>
-                    <TableCell className="font-medium text-foreground">
-                      {asset.assetTag}
+                  <TableRow key={asset.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                    <TableCell className="whitespace-nowrap text-sm text-slate-300">
+                      <Link href={`/assets/${asset.id}`} className="font-medium text-white transition-colors hover:text-violet-400 hover:underline">
+                        {asset.assetTag}
+                      </Link>
                     </TableCell>
-                    <TableCell>{asset.name}</TableCell>
-                    <TableCell>{asset.assetType}</TableCell>
-                    <TableCell>{asset.category}</TableCell>
-                    <TableCell>{asset.manufacturer ?? "—"}</TableCell>
-                    <TableCell>{asset.model ?? "—"}</TableCell>
-                    <TableCell>{asset.serialNumber ?? "—"}</TableCell>
-                    <TableCell>{asset.condition}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(asset.status)}>
-                        {asset.status.replace(/_/g, " ")}
+                    <TableCell className="text-sm text-slate-400">
+                      <div className="min-w-[160px]">
+                        <Link href={`/assets/${asset.id}`} className="font-medium text-white transition-colors hover:text-violet-400 hover:underline">
+                          {asset.name}
+                        </Link>
+                        {asset.description && (
+                          <p className="mt-0.5 max-w-[220px] truncate text-xs text-slate-500">{asset.description}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-400"><Badge variant="outline">{formatLabel(asset.assetType)}</Badge></TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-slate-300">{formatLabel(asset.category)}</TableCell>
+                    <TableCell className="text-sm text-slate-400">{asset.manufacturer ?? "—"}</TableCell>
+                    <TableCell className="text-sm text-slate-400">{asset.model ?? "—"}</TableCell>
+                    <TableCell className="text-sm text-slate-400">{asset.serialNumber ?? "—"}</TableCell>
+                    <TableCell className="text-sm text-slate-400"><Badge variant={getConditionBadgeVariant(asset.condition)}>{formatLabel(asset.condition)}</Badge></TableCell>
+                    <TableCell className="text-sm text-slate-400">
+                      <Badge variant={getStatusBadgeVariant(asset.status)} className="whitespace-nowrap">
+                        {formatLabel(asset.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-sm text-slate-400">
+                      {(() => {
+                        const health = getAssetHealthForList(asset);
+                        return (
+                          <Badge
+                            variant="outline"
+                            title={health.description}
+                            className={`whitespace-nowrap ${getHealthBadgeClass(health.level)}`}
+                          >
+                            {health.label}
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell className="text-sm text-slate-400">
                       <div className="flex flex-wrap gap-2">
                         <Link href={`/assets/${asset.id}`}>
   <Button
@@ -941,22 +1023,22 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
       {isDialogOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
           onClick={closeDialog}
         >
           <div
-            className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-lg border bg-background p-6 shadow-lg"
+            className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-slate-700 bg-[#0d121c] p-6 shadow-2xl shadow-black/50"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2 className="text-lg font-semibold text-slate-200">
                 Add Asset
               </h2>
               <button
                 type="button"
                 onClick={closeDialog}
                 disabled={isSubmitting}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-slate-500 hover:text-white"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -965,7 +1047,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {formError && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="flex items-start gap-2 rounded-2xl border border-slate-800 border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{formError}</span>
                 </div>
@@ -973,7 +1055,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="assetTag" className="text-sm font-medium text-foreground">
+                  <label htmlFor="assetTag" className="text-sm font-medium text-slate-200">
                     Asset Tag
                   </label>
                   <input
@@ -982,12 +1064,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.assetTag}
                     onChange={(e) => updateField("assetTag", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="name" className="text-sm font-medium text-foreground">
+                  <label htmlFor="name" className="text-sm font-medium text-slate-200">
                     Name
                   </label>
                   <input
@@ -996,12 +1078,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.name}
                     onChange={(e) => updateField("name", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="assetType" className="text-sm font-medium text-foreground">
+                  <label htmlFor="assetType" className="text-sm font-medium text-slate-200">
                     Asset Type
                   </label>
                   <select
@@ -1009,7 +1091,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.assetType}
                     onChange={(e) => updateField("assetType", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     <option value="">Select type</option>
                     {ASSET_TYPES.map((type) => (
@@ -1021,7 +1103,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="category" className="text-sm font-medium text-foreground">
+                  <label htmlFor="category" className="text-sm font-medium text-slate-200">
                     Category
                   </label>
                   <select
@@ -1029,7 +1111,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.category}
                     onChange={(e) => updateField("category", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     <option value="">Select category</option>
                     {ASSET_CATEGORIES.map((category) => (
@@ -1041,7 +1123,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="condition" className="text-sm font-medium text-foreground">
+                  <label htmlFor="condition" className="text-sm font-medium text-slate-200">
                     Condition
                   </label>
                   <select
@@ -1049,7 +1131,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.condition}
                     onChange={(e) => updateField("condition", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     {ASSET_CONDITIONS.map((condition) => (
                       <option key={condition} value={condition}>
@@ -1060,7 +1142,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="status" className="text-sm font-medium text-foreground">
+                  <label htmlFor="status" className="text-sm font-medium text-slate-200">
                     Status
                   </label>
                   <select
@@ -1068,7 +1150,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.status}
                     onChange={(e) => updateField("status", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     {ASSET_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -1079,7 +1161,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="manufacturer" className="text-sm font-medium text-foreground">
+                  <label htmlFor="manufacturer" className="text-sm font-medium text-slate-200">
                     Manufacturer
                   </label>
                   <input
@@ -1088,12 +1170,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.manufacturer}
                     onChange={(e) => updateField("manufacturer", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="model" className="text-sm font-medium text-foreground">
+                  <label htmlFor="model" className="text-sm font-medium text-slate-200">
                     Model
                   </label>
                   <input
@@ -1102,12 +1184,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.model}
                     onChange={(e) => updateField("model", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="serialNumber" className="text-sm font-medium text-foreground">
+                  <label htmlFor="serialNumber" className="text-sm font-medium text-slate-200">
                     Serial Number
                   </label>
                   <input
@@ -1116,12 +1198,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.serialNumber}
                     onChange={(e) => updateField("serialNumber", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="purchasePrice" className="text-sm font-medium text-foreground">
+                  <label htmlFor="purchasePrice" className="text-sm font-medium text-slate-200">
                     Purchase Price
                   </label>
                   <input
@@ -1132,12 +1214,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.purchasePrice}
                     onChange={(e) => updateField("purchasePrice", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="purchaseDate" className="text-sm font-medium text-foreground">
+                  <label htmlFor="purchaseDate" className="text-sm font-medium text-slate-200">
                     Purchase Date
                   </label>
                   <input
@@ -1146,12 +1228,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.purchaseDate}
                     onChange={(e) => updateField("purchaseDate", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="warrantyExpiry" className="text-sm font-medium text-foreground">
+                  <label htmlFor="warrantyExpiry" className="text-sm font-medium text-slate-200">
                     Warranty Expiry
                   </label>
                   <input
@@ -1160,12 +1242,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.warrantyExpiry}
                     onChange={(e) => updateField("warrantyExpiry", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="licenseKey" className="text-sm font-medium text-foreground">
+                  <label htmlFor="licenseKey" className="text-sm font-medium text-slate-200">
                     License Key
                   </label>
                   <input
@@ -1174,12 +1256,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.licenseKey}
                     onChange={(e) => updateField("licenseKey", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="licenseExpiry" className="text-sm font-medium text-foreground">
+                  <label htmlFor="licenseExpiry" className="text-sm font-medium text-slate-200">
                     License Expiry
                   </label>
                   <input
@@ -1188,13 +1270,13 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={formState.licenseExpiry}
                     onChange={(e) => updateField("licenseExpiry", e.target.value)}
                     disabled={isSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label htmlFor="description" className="text-sm font-medium text-foreground">
+                <label htmlFor="description" className="text-sm font-medium text-slate-200">
                   Description
                 </label>
                 <textarea
@@ -1203,7 +1285,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                   onChange={(e) => updateField("description", e.target.value)}
                   disabled={isSubmitting}
                   rows={3}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                 />
               </div>
 
@@ -1234,22 +1316,22 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
       {isEditDialogOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
           onClick={closeEditDialog}
         >
           <div
-            className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-lg border bg-background p-6 shadow-lg"
+            className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-lg border border-slate-700 bg-[#0d121c] p-6 shadow-2xl shadow-black/50"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2 className="text-lg font-semibold text-slate-200">
                 Edit Asset
               </h2>
               <button
                 type="button"
                 onClick={closeEditDialog}
                 disabled={isEditSubmitting}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-slate-500 hover:text-white"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
@@ -1258,7 +1340,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
             <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
               {editFormError && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="flex items-start gap-2 rounded-2xl border border-slate-800 border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{editFormError}</span>
                 </div>
@@ -1266,7 +1348,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-assetTag" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-assetTag" className="text-sm font-medium text-slate-200">
                     Asset Tag
                   </label>
                   <input
@@ -1275,12 +1357,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.assetTag}
                     onChange={(e) => updateEditField("assetTag", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-name" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-name" className="text-sm font-medium text-slate-200">
                     Name
                   </label>
                   <input
@@ -1289,12 +1371,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.name}
                     onChange={(e) => updateEditField("name", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-assetType" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-assetType" className="text-sm font-medium text-slate-200">
                     Asset Type
                   </label>
                   <select
@@ -1302,7 +1384,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.assetType}
                     onChange={(e) => updateEditField("assetType", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     <option value="">Select type</option>
                     {ASSET_TYPES.map((type) => (
@@ -1314,7 +1396,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-category" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-category" className="text-sm font-medium text-slate-200">
                     Category
                   </label>
                   <select
@@ -1322,7 +1404,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.category}
                     onChange={(e) => updateEditField("category", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     <option value="">Select category</option>
                     {ASSET_CATEGORIES.map((category) => (
@@ -1334,7 +1416,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-condition" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-condition" className="text-sm font-medium text-slate-200">
                     Condition
                   </label>
                   <select
@@ -1342,7 +1424,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.condition}
                     onChange={(e) => updateEditField("condition", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     {ASSET_CONDITIONS.map((condition) => (
                       <option key={condition} value={condition}>
@@ -1353,7 +1435,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-status" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-status" className="text-sm font-medium text-slate-200">
                     Status
                   </label>
                   <select
@@ -1361,7 +1443,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.status}
                     onChange={(e) => updateEditField("status", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     {ASSET_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -1372,7 +1454,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-manufacturer" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-manufacturer" className="text-sm font-medium text-slate-200">
                     Manufacturer
                   </label>
                   <input
@@ -1381,12 +1463,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.manufacturer}
                     onChange={(e) => updateEditField("manufacturer", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-model" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-model" className="text-sm font-medium text-slate-200">
                     Model
                   </label>
                   <input
@@ -1395,12 +1477,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.model}
                     onChange={(e) => updateEditField("model", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-serialNumber" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-serialNumber" className="text-sm font-medium text-slate-200">
                     Serial Number
                   </label>
                   <input
@@ -1409,12 +1491,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.serialNumber}
                     onChange={(e) => updateEditField("serialNumber", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-purchasePrice" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-purchasePrice" className="text-sm font-medium text-slate-200">
                     Purchase Price
                   </label>
                   <input
@@ -1425,12 +1507,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.purchasePrice}
                     onChange={(e) => updateEditField("purchasePrice", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-purchaseDate" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-purchaseDate" className="text-sm font-medium text-slate-200">
                     Purchase Date
                   </label>
                   <input
@@ -1439,12 +1521,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.purchaseDate}
                     onChange={(e) => updateEditField("purchaseDate", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-warrantyExpiry" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-warrantyExpiry" className="text-sm font-medium text-slate-200">
                     Warranty Expiry
                   </label>
                   <input
@@ -1453,12 +1535,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.warrantyExpiry}
                     onChange={(e) => updateEditField("warrantyExpiry", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-licenseKey" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-licenseKey" className="text-sm font-medium text-slate-200">
                     License Key
                   </label>
                   <input
@@ -1467,12 +1549,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.licenseKey}
                     onChange={(e) => updateEditField("licenseKey", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label htmlFor="edit-licenseExpiry" className="text-sm font-medium text-foreground">
+                  <label htmlFor="edit-licenseExpiry" className="text-sm font-medium text-slate-200">
                     License Expiry
                   </label>
                   <input
@@ -1481,13 +1563,13 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={editFormState.licenseExpiry}
                     onChange={(e) => updateEditField("licenseExpiry", e.target.value)}
                     disabled={isEditSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label htmlFor="edit-description" className="text-sm font-medium text-foreground">
+                <label htmlFor="edit-description" className="text-sm font-medium text-slate-200">
                   Description
                 </label>
                 <textarea
@@ -1496,7 +1578,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                   onChange={(e) => updateEditField("description", e.target.value)}
                   disabled={isEditSubmitting}
                   rows={3}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                 />
               </div>
 
@@ -1527,44 +1609,44 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
       {isAssignDialogOpen && assigningAsset && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
           onClick={closeAssignDialog}
         >
           <div
-            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-lg border bg-background p-6 shadow-lg"
+            className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-y-auto rounded-lg border border-slate-700 bg-[#0d121c] p-6 shadow-2xl shadow-black/50"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2 className="text-lg font-semibold text-slate-200">
                 Assign Asset
               </h2>
               <button
                 type="button"
                 onClick={closeAssignDialog}
                 disabled={isAssignSubmitting}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-slate-500 hover:text-white"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="mb-4 flex flex-col gap-1 rounded-md border bg-muted/40 p-3 text-sm">
+            <div className="mb-4 flex flex-col gap-1 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Asset Tag</span>
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-slate-200">
                   {assigningAsset.assetTag}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Name</span>
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-slate-200">
                   {assigningAsset.name}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Category</span>
-                <span className="font-medium text-foreground">
+                <span className="font-medium text-slate-200">
                   {assigningAsset.category.replace(/_/g, " ")}
                 </span>
               </div>
@@ -1578,23 +1660,23 @@ const [typeFilter, setTypeFilter] = useState("ALL");
 
             <form onSubmit={handleAssignSubmit} className="flex flex-col gap-4">
               {assignFormError && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="flex items-start gap-2 rounded-2xl border border-slate-800 border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{assignFormError}</span>
                 </div>
               )}
 
               <div className="flex flex-col gap-2">
-                <label htmlFor="assign-employee" className="text-sm font-medium text-foreground">
+                <label htmlFor="assign-employee" className="text-sm font-medium text-slate-200">
                   Employee
                 </label>
                 {isEmployeesLoading ? (
-                  <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm text-slate-400">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading employees...
                   </div>
                 ) : employeesError ? (
-                  <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <div className="flex items-center gap-2 rounded-2xl border border-slate-800 border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
                     <AlertCircle className="h-4 w-4" />
                     {employeesError}
                   </div>
@@ -1604,7 +1686,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                     value={assignFormState.employeeId}
                     onChange={(e) => updateAssignField("employeeId", e.target.value)}
                     disabled={isAssignSubmitting}
-                    className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                   >
                     <option value="">Select employee</option>
                     {employees.map((employee) => (
@@ -1617,7 +1699,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
               </div>
 
               <div className="flex flex-col gap-2">
-                <label htmlFor="assign-assignedAt" className="text-sm font-medium text-foreground">
+                <label htmlFor="assign-assignedAt" className="text-sm font-medium text-slate-200">
                   Assigned At
                 </label>
                 <input
@@ -1626,12 +1708,12 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                   value={assignFormState.assignedAt}
                   onChange={(e) => updateAssignField("assignedAt", e.target.value)}
                   disabled={isAssignSubmitting}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                 />
               </div>
 
               <div className="flex flex-col gap-2">
-                <label htmlFor="assign-condition" className="text-sm font-medium text-foreground">
+                <label htmlFor="assign-condition" className="text-sm font-medium text-slate-200">
                   Assigned Condition
                 </label>
                 <select
@@ -1639,7 +1721,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                   value={assignFormState.assignedCondition}
                   onChange={(e) => updateAssignField("assignedCondition", e.target.value)}
                   disabled={isAssignSubmitting}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                 >
                   {ASSET_CONDITIONS.map((condition) => (
                     <option key={condition} value={condition}>
@@ -1650,7 +1732,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
               </div>
 
               <div className="flex flex-col gap-2">
-                <label htmlFor="assign-notes" className="text-sm font-medium text-foreground">
+                <label htmlFor="assign-notes" className="text-sm font-medium text-slate-200">
                   Notes
                 </label>
                 <textarea
@@ -1659,7 +1741,7 @@ const [typeFilter, setTypeFilter] = useState("ALL");
                   onChange={(e) => updateAssignField("notes", e.target.value)}
                   disabled={isAssignSubmitting}
                   rows={3}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  className="rounded-2xl border border-slate-800 border-slate-700 bg-[#080b12] px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:opacity-50"
                 />
               </div>
 

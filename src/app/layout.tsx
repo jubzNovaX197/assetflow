@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AssetFlow",
+  title: "Assquere",
   description: "Enterprise company asset lifecycle and custody management system",
 };
 

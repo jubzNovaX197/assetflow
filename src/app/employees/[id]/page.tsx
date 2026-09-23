@@ -101,7 +101,7 @@ function getStatusClass(status: string) {
     case "REJECTED":
       return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
     default:
-      return "bg-muted text-muted-foreground";
+      return "bg-muted text-slate-400";
   }
 }
 
@@ -113,9 +113,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border bg-card">
-      <div className="border-b px-6 py-4">
-        <h2 className="text-lg font-semibold text-foreground">
+    <section className="rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
+      <div className="border-b border-slate-800/80 px-6 py-4">
+        <h2 className="text-lg font-semibold text-white">
           {title}
         </h2>
       </div>
@@ -191,7 +191,7 @@ export default function EmployeeDetailsPage() {
   if (isLoading) {
     return (
       <AppShell title="Employee Details">
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-muted-foreground">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-slate-400">
           <Loader2 className="h-8 w-8 animate-spin" />
           <p className="text-sm">
             Loading employee details...
@@ -208,10 +208,10 @@ export default function EmployeeDetailsPage() {
           <AlertCircle className="h-10 w-10 text-destructive" />
 
           <div>
-            <p className="font-medium text-foreground">
+            <p className="font-medium text-white">
               {error || "Employee details not found."}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-slate-400">
               Please go back and try again.
             </p>
           </div>
@@ -231,14 +231,14 @@ export default function EmployeeDetailsPage() {
 
   return (
     <AppShell title="Employee Details">
-      <div className="flex flex-col gap-6">
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col gap-6 bg-[#080b12] -m-4 p-4 md:-m-6 md:p-6 lg:-m-8 lg:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
               {employee.name}
             </h1>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               Employee Code: {employee.employeeCode}
             </p>
           </div>
@@ -254,61 +254,61 @@ export default function EmployeeDetailsPage() {
         <Section title="Employee Information">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Employee Code
               </p>
-              <p className="mt-1 font-medium text-foreground">
+              <p className="mt-1 font-medium text-white">
                 {employee.employeeCode}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Name
               </p>
-              <p className="mt-1 font-medium text-foreground">
+              <p className="mt-1 font-medium text-white">
                 {employee.name}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Email
               </p>
-              <p className="mt-1 text-foreground">
+              <p className="mt-1 text-white">
                 {employee.email}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Department
               </p>
-              <p className="mt-1 text-foreground">
+              <p className="mt-1 text-white">
                 {employee.department}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Designation
               </p>
-              <p className="mt-1 text-foreground">
+              <p className="mt-1 text-white">
                 {employee.designation ?? "—"}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Phone
               </p>
-              <p className="mt-1 text-foreground">
+              <p className="mt-1 text-white">
                 {employee.phone ?? "—"}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Status
               </p>
               <div className="mt-1">
@@ -328,38 +328,38 @@ export default function EmployeeDetailsPage() {
           </div>
         </Section>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-  <div className="rounded-lg border bg-card p-4">
-    <p className="text-sm text-muted-foreground">
+  <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.18)]">
+    <p className="text-sm text-slate-400">
       Current Assets
     </p>
-    <p className="mt-2 text-2xl font-bold">
+    <p className="mt-2 text-2xl font-bold text-white">
       {details.currentAssets.length}
     </p>
   </div>
 
-  <div className="rounded-lg border bg-card p-4">
-    <p className="text-sm text-muted-foreground">
+  <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.18)]">
+    <p className="text-sm text-slate-400">
       Previous Assets
     </p>
-    <p className="mt-2 text-2xl font-bold">
+    <p className="mt-2 text-2xl font-bold text-white">
       {details.previousAssets.length}
     </p>
   </div>
 
-  <div className="rounded-lg border bg-card p-4">
-    <p className="text-sm text-muted-foreground">
+  <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.18)]">
+    <p className="text-sm text-slate-400">
       Total Assignments
     </p>
-    <p className="mt-2 text-2xl font-bold">
+    <p className="mt-2 text-2xl font-bold text-white">
       {details.assignments.length}
     </p>
   </div>
 
-  <div className="rounded-lg border bg-card p-4">
-    <p className="text-sm text-muted-foreground">
+  <div className="rounded-2xl border border-slate-800/80 bg-[#0d121c] p-4 shadow-[0_12px_35px_rgba(0,0,0,0.18)]">
+    <p className="text-sm text-slate-400">
       Return Requests
     </p>
-    <p className="mt-2 text-2xl font-bold">
+    <p className="mt-2 text-2xl font-bold text-white">
       {details.returnRequests.length}
     </p>
   </div>
@@ -367,34 +367,34 @@ export default function EmployeeDetailsPage() {
 
         <Section title="Current Assets">
           {details.currentAssets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               No assets are currently assigned to this
               employee.
             </p>
           ) : (
-            <div className="w-full overflow-x-auto rounded-md border">
+            <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset Tag</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Condition</TableHead>
+                <TableHeader className="bg-slate-900/70">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset Tag</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Name</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Category</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Condition</TableHead>
                   </TableRow>
                 </TableHeader>
 
-                <TableBody>
+                <TableBody className="divide-y divide-slate-800/70">
                   {details.currentAssets.map((asset) => (
-                    <TableRow key={asset.id}>
-                      <TableCell className="font-medium">
+                    <TableRow key={asset.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                      <TableCell className="font-semibold text-white">
                         {asset.assetTag}
                       </TableCell>
 
                       <TableCell>
                         <Link
                           href={`/assets/${asset.id}`}
-                          className="text-primary hover:underline"
+                          className="text-violet-400 transition-colors hover:text-violet-300 hover:underline"
                         >
                           {asset.name}
                         </Link>
@@ -427,32 +427,32 @@ export default function EmployeeDetailsPage() {
 
         <Section title="Previous Assets">
           {details.previousAssets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               No previous asset assignments found.
             </p>
           ) : (
-            <div className="w-full overflow-x-auto rounded-md border">
+            <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset Tag</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Current Status</TableHead>
+                <TableHeader className="bg-slate-900/70">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset Tag</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Name</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Category</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Current Status</TableHead>
                   </TableRow>
                 </TableHeader>
 
-                <TableBody>
+                <TableBody className="divide-y divide-slate-800/70">
                   {details.previousAssets.map((asset) => (
-                    <TableRow key={asset.id}>
-                      <TableCell className="font-medium">
+                    <TableRow key={asset.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                      <TableCell className="font-semibold text-white">
                         {asset.assetTag}
                       </TableCell>
 
                       <TableCell>
                         <Link
                           href={`/assets/${asset.id}`}
-                          className="text-primary hover:underline"
+                          className="text-violet-400 transition-colors hover:text-violet-300 hover:underline"
                         >
                           {asset.name}
                         </Link>
@@ -481,24 +481,24 @@ export default function EmployeeDetailsPage() {
 
         <Section title="Assignment History">
           {details.assignments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               No assignment history found.
             </p>
           ) : (
-            <div className="w-full overflow-x-auto rounded-md border">
+            <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset</TableHead>
-                    <TableHead>Assigned At</TableHead>
-                    <TableHead>Assigned Condition</TableHead>
-                    <TableHead>Returned At</TableHead>
-                    <TableHead>Returned Condition</TableHead>
-                    <TableHead>Notes</TableHead>
+                <TableHeader className="bg-slate-900/70">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Assigned At</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Assigned Condition</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Returned At</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Returned Condition</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Notes</TableHead>
                   </TableRow>
                 </TableHeader>
 
-                <TableBody>
+                <TableBody className="divide-y divide-slate-800/70">
                   {details.assignments.map((assignment) => {
                     const asset = [
                       ...details.currentAssets,
@@ -509,12 +509,12 @@ export default function EmployeeDetailsPage() {
                     );
 
                     return (
-                      <TableRow key={assignment.id}>
-                        <TableCell className="font-medium">
+                      <TableRow key={assignment.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                        <TableCell className="font-semibold text-white">
                           {asset ? (
                             <Link
                               href={`/assets/${asset.id}`}
-                              className="text-primary hover:underline"
+                              className="text-violet-400 transition-colors hover:text-violet-300 hover:underline"
                             >
                               {asset.assetTag}
                             </Link>
@@ -558,28 +558,28 @@ export default function EmployeeDetailsPage() {
 
         <Section title="Return History">
           {details.returnRequests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               No return history found.
             </p>
           ) : (
-            <div className="w-full overflow-x-auto rounded-md border">
+            <div className="w-full overflow-x-auto rounded-2xl border border-slate-800/80 bg-[#0d121c] shadow-[0_12px_35px_rgba(0,0,0,0.2)]">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Requested At</TableHead>
-                    <TableHead>Processed At</TableHead>
-                    <TableHead>Notes</TableHead>
+                <TableHeader className="bg-slate-900/70">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Asset</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Reason</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Status</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Requested At</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Processed At</TableHead>
+                    <TableHead className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-400">Notes</TableHead>
                   </TableRow>
                 </TableHeader>
 
-                <TableBody>
+                <TableBody className="divide-y divide-slate-800/70">
                   {details.returnRequests.map(
                     (returnRequest) => (
-                      <TableRow key={returnRequest.id}>
-                       <TableCell className="font-medium">
+                      <TableRow key={returnRequest.id} className="border-slate-800/70 transition-colors hover:bg-violet-500/[0.05]">
+                       <TableCell className="font-semibold text-white">
   {(() => {
     const asset = [
       ...details.currentAssets,
@@ -596,12 +596,12 @@ export default function EmployeeDetailsPage() {
       <div className="flex flex-col">
         <Link
           href={`/assets/${asset.id}`}
-          className="text-primary hover:underline"
+          className="text-violet-400 transition-colors hover:text-violet-300 hover:underline"
         >
           {asset.assetTag}
         </Link>
 
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-slate-500">
           {asset.name}
         </span>
       </div>

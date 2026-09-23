@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  requireAdminApiSession,
+  requireAuthenticatedSession,
+} from "@/lib/auth-guard";
 import { db } from "@/prisma/db";
 
 const ALLOWED_FIELDS = [
@@ -13,14 +17,90 @@ const ALLOWED_FIELDS = [
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function adminErrorResponse(error: unknown) {
+  if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Administrator access required",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error("Return request authorization error:", error);
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message: "Unable to verify administrator access",
+    },
+    { status: 500 }
+  );
+}
+
+function authenticatedErrorResponse(error: unknown) {
+  if (error instanceof Error && error.message === "UNAUTHORIZED") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Authentication required",
+      },
+      { status: 401 }
+    );
+  }
+
+  if (error instanceof Error && error.message === "FORBIDDEN") {
+    return NextResponse.json(
+      {
+        status: "error",
+        message: "Access denied",
+      },
+      { status: 403 }
+    );
+  }
+
+  console.error(
+    "Return request authentication error:",
+    error
+  );
+
+  return NextResponse.json(
+    {
+      status: "error",
+      message: "Unable to verify authentication",
+    },
+    { status: 500 }
+  );
+}
+
 export async function GET() {
+  try {
+    await requireAdminApiSession();
+  } catch (error) {
+    return adminErrorResponse(error);
+  }
+
   try {
     const returnRequests =
       await db.orm.public.ReturnRequest.all();
 
-    return NextResponse.json(returnRequests, {
-      status: 200,
-    });
+    return NextResponse.json(
+      returnRequests,
+      {
+        status: 200,
+      }
+    );
   } catch (error) {
     console.error(
       "Failed to fetch return requests:",
@@ -38,6 +118,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  let session;
+
+  try {
+    session = await requireAuthenticatedSession();
+  } catch (error) {
+    return authenticatedErrorResponse(error);
+  }
+
   let body: unknown;
 
   try {
@@ -168,16 +256,37 @@ export async function POST(request: Request) {
     );
   }
 
+  /*
+   * Employee identity comes from the authenticated session.
+   * An employee cannot create a return request on behalf
+   * of another employee.
+   */
+  if (
+    session.user.role === "EMPLOYEE" &&
+    employeeId !== session.user.employeeId
+  ) {
+    return NextResponse.json(
+      {
+        status: "error",
+        message:
+          "You can only create return requests for your own assigned assets",
+      },
+      { status: 403 }
+    );
+  }
+
   const validatedData = {
     assetId,
     employeeId,
-    reason,
+    reason: reason.trim(),
     status: "PENDING" as const,
     requestedAt: new Date().toISOString(),
     ...(processedAt !== undefined && {
       processedAt,
     }),
-    ...(notes !== undefined && { notes }),
+    ...(notes !== undefined && {
+      notes,
+    }),
   };
 
   try {
@@ -261,7 +370,10 @@ export async function POST(request: Request) {
     await db.orm.public.AuditLog.create({
       assetId,
       action: "ASSET_RETURN_REQUESTED",
-      actor: "Admin",
+      actor:
+        session.user.role === "ADMIN"
+          ? "Admin"
+          : `Employee:${session.user.employeeId}`,
       oldStatus: "ASSIGNED",
       newStatus: "RETURN_REQUESTED",
       metadata: {
