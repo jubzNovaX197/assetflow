@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-
+import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
 
 export async function getCurrentSession() {
@@ -17,10 +17,14 @@ export async function requireAuthenticatedSession() {
 }
 
 export async function requireAdminSession() {
-  const session = await requireAuthenticatedSession();
+  const session = await getCurrentSession();
+
+  if (!session?.user?.id || !session.user.role) {
+    redirect("/login");
+  }
 
   if (session.user.role !== "ADMIN") {
-    throw new Error("FORBIDDEN");
+    redirect("/employee/dashboard");
   }
 
   return session;
@@ -37,10 +41,14 @@ export async function requireAdminApiSession() {
 }
 
 export async function requireEmployeeSession() {
-  const session = await requireAuthenticatedSession();
+  const session = await getCurrentSession();
+
+  if (!session?.user?.id || !session.user.role) {
+    redirect("/login");
+  }
 
   if (session.user.role !== "EMPLOYEE") {
-    throw new Error("FORBIDDEN");
+    redirect("/");
   }
 
   return session;
