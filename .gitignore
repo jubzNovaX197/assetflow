@@ -44,3 +44,11 @@ dist/
 .env
 
 assetflow-backup.dump
+
+# Local Prisma skill files
+.agents/skills/prisma-8/
+.claude/skills/prisma-8/
+.cursor/skills/prisma-8/
+.devin/skills/prisma-8/
+# Local database backup
+assetflow-local.dump

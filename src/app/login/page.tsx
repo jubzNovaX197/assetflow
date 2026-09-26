@@ -263,7 +263,19 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </div>
-
+                {/* Demo admin login */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail("testuser@example.com");
+                    setPassword("AssetFlow@Admin2026!");
+                    setError("");
+                  }}
+                  disabled={isLoading}
+                  className="w-full rounded-xl border border-violet-400/15 bg-violet-500/5 px-4 py-2.5 text-xs font-medium text-violet-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 disabled:opacity-50"
+                >
+                  Use Admin Demo Account
+                </button>
                 {/* Error */}
                 {error && (
                   <div
